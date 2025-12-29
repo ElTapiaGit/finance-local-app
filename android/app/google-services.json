@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "349763968810",
+    "project_id": "finance-app-bolivia",
+    "storage_bucket": "finance-app-bolivia.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:349763968810:android:0d0512c79ea1fc561a8853",
+        "android_client_info": {
+          "package_name": "com.eltapiadev.finances"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAN_DQCRl8KN-rr6HeZVmFqGu8bxkCz_MQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,47 @@
+name: finance_local
+description: Aplicación de gestión de finanzas personales offline. Permite registrar ingresos, gastos y programar notificaciones para pagos recurrentes.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.0
+  shared_preferences: ^2.2.1
+  device_info_plus: ^12.3.0
+  vibration: ^3.1.4
+  flutter_timezone: ^5.0.1
+  timezone: ^0.10.1                    
+  flutter_local_notifications: ^19.5.0
+  intl: ^0.20.0
+  fl_chart: ^0.66.2 
+  firebase_core: ^4.2.1
+  firebase_analytics: ^12.0.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.6
+  hive_generator: ^2.0.1
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon/logo.png
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true  
+  image_path: "assets/icon/logo.png" 
+  min_sdk_android: 21 
+  adaptive_icon_background: "#102216" 
+  adaptive_icon_foreground: "assets/icon/logo.png"
