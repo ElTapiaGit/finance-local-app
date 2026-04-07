@@ -134,12 +134,13 @@ class _AddReminderModalState extends State<AddReminderModal> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final keyboardSpace = MediaQuery.of(context).viewInsets.bottom; // Altura del teclado
+    final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
+    final systemBottomPadding = MediaQuery.of(context).padding.bottom;
     final contrastColor = isDarkMode ? AppColors.primary : AppColors.primaryLight;
 
     return Padding(
       // Empuja el modal hacia arriba
-      padding: EdgeInsets.only(bottom: keyboardSpace),
+      padding: EdgeInsets.only(bottom: keyboardSpace + systemBottomPadding),
       child: SizedBox(
         height: 650, // altura fija modal
         child: Column(

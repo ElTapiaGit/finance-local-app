@@ -38,5 +38,3 @@ subprojects {
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
-
-// --- CORRECCION CLAVE PARA ISAR ---

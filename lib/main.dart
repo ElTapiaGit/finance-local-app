@@ -34,11 +34,17 @@ void main() async {
   }
 
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge); //modo borde a borde
   // UI System Overlay (Rapido)
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle( 
+    //barra superior
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark, 
     statusBarBrightness: Brightness.light, 
+    // Barra inferior (Gestos/Botones de Android)
+    systemNavigationBarColor: Colors.transparent, // Esto la hace transparente
+    systemNavigationBarDividerColor: Colors.transparent,
+    systemNavigationBarIconBrightness: Brightness.dark,
   ));
 
   // Bloqueo de orientacion 

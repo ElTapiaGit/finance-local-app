@@ -346,6 +346,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
     final activeColor = _isExpense ? Colors.redAccent : incomeColor;
     // Obtenemos la altura del teclado
     final keyboardSpace = MediaQuery.of(context).viewInsets.bottom;
+    final systemBottomPadding = MediaQuery.of(context).padding.bottom; //altura botones navegacion de android
     final visibleCats = _visibleCategories;
     // Validamos que la categoria seleccionada siga siendo visible
     if (!visibleCats.any((c) => c['name'] == _selectedCategoryName)) {
@@ -368,7 +369,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
     
     return Padding(
       // Empuja el modal hacia arriba cuando sale el teclado
-      padding: EdgeInsets.only(bottom: keyboardSpace),
+      padding: EdgeInsets.only(bottom: keyboardSpace + systemBottomPadding),
       child: SizedBox(
         height: 650, //altura
         child: Column(
@@ -413,6 +414,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
                         // Permite solo numeros y solo UN punto decimal
+                        LengthLimitingTextInputFormatter(14),
                         FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')), 
                         // Aplicamos nuestro clase formateador
                         CurrencyInputFormatter(),
@@ -439,7 +441,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                         }
                       },
                       decoration: InputDecoration(
-                        labelText: "Concepto (Ej: Almuerzo)",
+                        labelText: "Concepto (Ej: ${currentCat['example']})",
                         labelStyle: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black87,),
                         prefixIcon: const Icon(Icons.edit_note_rounded),
                         filled: true,

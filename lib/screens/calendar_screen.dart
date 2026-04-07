@@ -510,10 +510,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
       backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
+        final systemBottomPadding = MediaQuery.of(context).padding.bottom;
         return Container(
-          padding: const EdgeInsets.all(20),
-          height: 200,
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + systemBottomPadding),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
                 leading: Container(
