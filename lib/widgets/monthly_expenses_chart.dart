@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
+import '../utils/currency_format.dart';
 import '../utils/math_utils.dart';
 
 class MonthlyExpensesChart extends StatelessWidget {
@@ -15,7 +16,7 @@ class MonthlyExpensesChart extends StatelessWidget {
 
   String _formatCurrency(double amount) {
     final formatter = NumberFormat("#,##0.00", "en_US"); 
-    return "Bs ${formatter.format(amount)}";
+    return "${CurrencyFormat.currencySymbol}  ${formatter.format(amount)}";
   }
 
   @override

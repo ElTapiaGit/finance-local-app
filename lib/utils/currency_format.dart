@@ -2,10 +2,12 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 class CurrencyFormat {
-  // Metodo para formato moneda ej: 23,540.00
+  // moneda por defecto
+  static String currencySymbol = 'Bs';
+  // Metodo para formato moneda
   static String format(double amount) {
     final formatter = NumberFormat("#,##0.00", "en_US"); 
-    return "Bs ${formatter.format(amount)}";
+    return "$currencySymbol ${formatter.format(amount)}";
   }
 }
 
@@ -43,7 +45,7 @@ class CurrencyInputFormatter extends TextInputFormatter {
       try {
         newIntegerPart = formatter.format(int.parse(integerPart));
       } catch (e) {
-        return oldValue; // Si falla el parseo (ej: caracteres raros)
+        return oldValue; // Si falla el parseo (caracteres raros)
       }
     }
 

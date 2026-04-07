@@ -107,7 +107,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
     await notifService.scheduleMonthlyNotification(
       id: newId, 
       title: "¡Momento de pagar!",
-      body: "Pagar $title (Bs ${amount.toStringAsFixed(2)})",
+      body: "Pagar $title (${CurrencyFormat.currencySymbol}  ${amount.toStringAsFixed(2)})",
       dayOfMonth: _selectedDay,
       hour: _selectedTime.hour,     
       minute: _selectedTime.minute, 
@@ -204,7 +204,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
                         CurrencyInputFormatter(),
                       ],
                       decoration: InputDecoration(
-                        labelText: "Monto Mensual (Bs)",
+                        labelText: "Monto Mensual (${CurrencyFormat.currencySymbol})",
                         labelStyle: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black87,),
                         prefixIcon: const Icon(Icons.attach_money_rounded),
                         filled: true,

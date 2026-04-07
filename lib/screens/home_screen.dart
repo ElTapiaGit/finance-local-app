@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously
 import 'package:finance_local/utils/math_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:vibration/vibration.dart';
@@ -12,6 +13,7 @@ import '../models/transaction_model.dart';
 import '../widgets/expenses_bar_chart.dart';
 import '../screens/monthly_expenses_screen.dart';
 import '../utils/currency_format.dart';
+import '../widgets/settings_modal.dart';
 //import '../utils/data_seeder.dart'; //granja de datos pruebas
 
 class HomeScreen extends StatefulWidget {
@@ -194,24 +196,53 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Header
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Column(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        "Hola, $userName",
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Hola, $userName",
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Resumen de $currentMonth",
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: textColorSecondary,
+                                  fontWeight: FontWeight.normal,
+                                ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        "Resumen de $currentMonth",
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: textColorSecondary,
-                              fontWeight: FontWeight.normal,
+                      // BOTON DE AJUSTES
+                      IconButton(
+                        icon: Icon(Icons.settings_outlined, color: textColorSecondary),
+                        onPressed: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                             ),
-                      ),
+                            builder: (context) => SettingsModal(
+                              initialUserName: userName,
+                              onProfileUpdated: (newName) {
+                                // Esta función se llama cuando el usuario guarda cambios en el modal
+                                setState(() {
+                                  userName = newName;
+                                });
+                              },
+                            ),
+                          );
+                        },
+                      )
                     ],
                   ),
                 ),
@@ -394,7 +425,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- WIDGET PRINCIPAL DE BALANCE (CON VIBRACIÓN) ---
+  // WIDGET PRINCIPAL DE BALANCE (CON VIBRACION) 
   Widget _buildBalanceCard({
     required BuildContext context, 
     required double totalBalance, 

@@ -12,6 +12,7 @@ import 'screens/welcome_screen.dart';
 import 'screens/calendar_screen.dart';
 import 'services/database_service.dart';
 import 'services/notification_service.dart';
+import 'utils/currency_format.dart';
 
 // variable global para Deep Linking
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -154,7 +155,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Ejecutamos la carga después de que el primer frame se haya dibujado
+    // Ejecutamos la carga despues de que el primer frame se haya dibujado
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeApp();
     });
@@ -184,7 +185,12 @@ class _SplashScreenState extends State<SplashScreen> {
         // VERIFICAR SI YA TIENE NOMBRE GUARDADO
         final prefs = await SharedPreferences.getInstance();
         final String? savedName = prefs.getString('user_name');
+        final String? savedCurrency = prefs.getString('currency_symbol'); // LEEMOS MONEDA
 
+        if (savedCurrency != null && savedCurrency.isNotEmpty) {
+          CurrencyFormat.currencySymbol = savedCurrency;
+        }
+        
         if (savedName != null && savedName.isNotEmpty) {
           // Ya tiene nombre -> Al Home
           Navigator.of(context).pushReplacement(

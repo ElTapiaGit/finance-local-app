@@ -422,7 +422,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: activeColor),
                       decoration: InputDecoration(
-                        prefixText: "Bs ", 
+                        prefixText: "${CurrencyFormat.currencySymbol} ",
                         hintText: "0.00",
                         hintStyle: TextStyle(color: Colors.grey.shade400),
                         border: InputBorder.none,
