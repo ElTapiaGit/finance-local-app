@@ -6,6 +6,7 @@ import '../main.dart'; // Para AppColors
 import '../services/database_service.dart';
 import '../services/notification_service.dart';
 import '../utils/currency_format.dart';
+import '../utils/custom_snackbar.dart';
 
 class AddReminderModal extends StatefulWidget {
   final int? initialDay; //obtenemos el dia del calendario
@@ -71,7 +72,6 @@ class _AddReminderModalState extends State<AddReminderModal> {
   }
 
   Future<void> _save() async {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final title = _titleController.text.trim();
     
     //OBTENER Y LIMPIAR EL MONTO
@@ -100,6 +100,8 @@ class _AddReminderModalState extends State<AddReminderModal> {
       dayOfMonth: _selectedDay,
       color: colorValue,
       icon: iconCode, //icono para smart match
+      hour: _selectedTime.hour,
+      minute: _selectedTime.minute,
     );
 
     // PROGRAMAR NOTIFICACION
@@ -120,13 +122,11 @@ class _AddReminderModalState extends State<AddReminderModal> {
       // ignore: use_build_context_synchronously
       final timeStr = _selectedTime.format(context); 
       // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Alarma creada: Día $_selectedDay a las $timeStr", style: TextStyle(color: isDarkMode ? const Color(0xFF221A1A) : Colors.white, fontWeight: FontWeight.bold),),
-          backgroundColor: isDarkMode ? AppColors.primary.withValues(alpha: 0.9) : AppColors.primaryLight.withValues(alpha: 0.9),
-          duration: const Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
-        ),
+      CustomSnackBar.show(
+        // ignore: use_build_context_synchronously
+        context: context,
+        message: "Alarma creada: Día $_selectedDay a las $timeStr",
+        icon: Icons.alarm_on_rounded, // Icono sugerido
       );
     }
   }
@@ -371,7 +371,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
                           const SizedBox(width: 12,),
                           Expanded(
                             child: Text(
-                              "Resivira notificaciones cada mes, el día $_selectedDay de cada mes. Recuerde otorgar permiso para recibir notificacion.",
+                              "Recibirá notificaciones cada mes, el día $_selectedDay de cada mes. Recuerde otorgar permiso para recibir notificación.",
                               style: TextStyle(
                                 fontSize: 13,
                                 color: isDarkMode ? Colors.white70 : Colors.black87
@@ -394,7 +394,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
               height: 85, 
               child: SaveButton(
                 label: "Activar Recordatorio",
-                onPressed: _save, // Pasamos la función limpia
+                onPressed: _save, // Pasamos la funcion limpia
               ),
             ),
           ],

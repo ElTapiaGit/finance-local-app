@@ -1,6 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'dart:io';
 import '../main.dart'; 
 
@@ -17,7 +18,9 @@ class NotificationService {
     // configurar zona horaria real
     tz.initializeTimeZones();
     try {
-      tz.setLocalLocation(tz.getLocation('America/La_Paz'));
+      // zona internacional automatizado por zona del dispositivo
+      final tzInfo = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(tzInfo.identifier));
     } catch (e) {
       tz.setLocalLocation(tz.UTC); 
     }
@@ -112,7 +115,8 @@ class NotificationService {
       nextDate,
       notificationDetails,
       //Hace que se repita cada mes en ese dia y hora
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      //androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // es puntual despierta a la hora que programa
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       // Obligatorio en v17+
       //uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       // Repeticion mensual

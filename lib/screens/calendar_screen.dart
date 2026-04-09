@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../services/database_service.dart';
 import '../models/reminder_model.dart';
 import '../models/transaction_model.dart';
+import '../utils/custom_snackbar.dart';
 import '../widgets/add_transaction_modal.dart';
 import '../widgets/add_reminder_modal.dart'; // boton flotante
 import '../utils/currency_format.dart';
@@ -332,7 +333,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
     // CAMBIO DE COLORES DEL BOTON
     final buttonColor = isDarkMode ? AppColors.primary : AppColors.primaryLight;
     final buttonTextColor = isDarkMode ? Colors.black : Colors.white;
+    
+    // red de seguridad pa usuarios antiguos
+    int displayHour = 9;
+    int displayMinute = 0;
+    try {
+      // leemos la hora nueva
+      displayHour = rem.hour;
+      displayMinute = rem.minute;
+    } catch (e) {
+      // Si entra al 'catch', significa que es un recordatorio viejo (previo a la actualizacion).
+      // El error se silencia y se usaran las 09:00 por defecto para no romper la pantalla.
+    }
 
+    // Se asegura de ponerle un '0' a la izquierda si es un solo digito (ej: 9 -> 09)
+    final timeText = "${displayHour.toString().padLeft(2, '0')}:${displayMinute.toString().padLeft(2, '0')}";
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -355,7 +371,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   children: [
                     Text(rem.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDarkMode ? Colors.white : Colors.black87)),
                     Text(
-                      isPaid ? "Pagado hoy" : "Suscripción Mensual", 
+                      isPaid ? "Pagado hoy" : "Suscripción Mensual• $timeText", 
                       style: TextStyle(color: accentColor, fontSize: 12, fontWeight: FontWeight.bold)
                     ),
                   ],
@@ -440,8 +456,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   // DIALOGO PARA DAR DE BAJA
   void _confirmCancelSubscription(ReminderModel rem) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final snackBarColor = isDarkMode ? AppColors.primary : AppColors.primaryLight.withValues(alpha: 0.9);
-    final snackBarTextColor = isDarkMode ? const Color(0xFF141212) : Colors.white;
+    
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -456,10 +471,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
               if (mounted) {
                 // ignore: use_build_context_synchronously
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Suscripción cancelada", style: TextStyle(color: snackBarTextColor, fontWeight: FontWeight.bold)),
-                    backgroundColor: snackBarColor, behavior: SnackBarBehavior.floating,
-                  )
+                CustomSnackBar.show(
+                  context: context,
+                  message: "Suscripción cancelada",
+                  icon: Icons.notifications_off_rounded,
+                  // Puedes dejar que tome los colores por defecto o forzar los grises
+                  backgroundColor: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade600,
+                  iconColor: Colors.white,
                 );
               }
             }, 

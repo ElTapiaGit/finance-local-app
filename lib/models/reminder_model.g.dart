@@ -23,13 +23,15 @@ class ReminderModelAdapter extends TypeAdapter<ReminderModel> {
       ..isActive = fields[3] as bool
       ..colorValue = fields[4] as int
       ..iconCode = fields[5] as int
-      ..createdAt = fields[6] as DateTime;
+      ..createdAt = fields[6] as DateTime
+      ..hour = fields[7] as int
+      ..minute = fields[8] as int;
   }
 
   @override
   void write(BinaryWriter writer, ReminderModel obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.title)
       ..writeByte(1)
@@ -43,7 +45,11 @@ class ReminderModelAdapter extends TypeAdapter<ReminderModel> {
       ..writeByte(5)
       ..write(obj.iconCode)
       ..writeByte(6)
-      ..write(obj.createdAt);
+      ..write(obj.createdAt)
+      ..writeByte(7)
+      ..write(obj.hour)
+      ..writeByte(8)
+      ..write(obj.minute);
   }
 
   @override

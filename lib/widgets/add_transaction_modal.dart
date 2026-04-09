@@ -8,7 +8,7 @@ import '../services/database_service.dart';
 import '../models/transaction_model.dart';
 import '../utils/currency_format.dart';
 import '../utils/categories_data.dart';
-
+import '../utils/custom_snackbar.dart';
 class AddTransactionModal extends StatefulWidget {
   final TransactionModel? transactionToEdit;
 
@@ -282,19 +282,13 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
           ? "Transacción actualizada exitosamente" 
           : "Transacción registrada exitosamente";
       
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            message,
-            style: TextStyle(color: successTextColor, fontWeight: FontWeight.bold)
-          ),
-          backgroundColor: successColor,
-          behavior: SnackBarBehavior.floating, 
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          duration: const Duration(seconds: 2),
-          margin: const EdgeInsets.all(16),
-        ),
+      CustomSnackBar.show(
+        // ignore: use_build_context_synchronously
+        context: context,
+        message: message,
+        icon: isUpdate ? Icons.edit_rounded : Icons.check_circle_rounded,
+        backgroundColor: successColor,
+        iconColor: successTextColor,
       );
     }
   }
@@ -640,7 +634,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
               child: SaveButton(
                 // Cambiamos el texto dinámicamente
                 label: widget.transactionToEdit != null ? "Actualizar Transacción" : "Guardar Transacción",
-                onPressed: _submitData, // Le pasamos la función limpia
+                onPressed: _submitData, // Le pasamos la funcion limpia
               ),
             ),
           ],

@@ -104,7 +104,6 @@ class MonthlyExpensesChart extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Fila Superior: Nombre y Monto
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [

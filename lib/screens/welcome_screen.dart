@@ -22,7 +22,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   void initState() {
     super.initState();
     
-    // Auto-detectar el país después del primer frame para tener acceso al context
+    // Auto-detectar el pais despues del primer frame para tener acceso al context
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final locale = Localizations.localeOf(context);
       final countryCode = locale.countryCode; 
@@ -43,10 +43,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         
         if (detectedName != null) {
           setState(() {
-            // Buscamos el país en nuestra lista oficial
+            // Buscamos el pais en nuestra lista oficial
             _selectedCountry = CountryData.countries.firstWhere(
               (c) => c['name'] == detectedName,
-              // Si falla por alguna razón, no selecciona nada
+              // Si falla por alguna razon, no selecciona nada
               orElse: () => CountryData.countries.first, 
             );
           });
@@ -56,7 +56,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   }
 
   Future<void> _saveNameAndContinue() async {
-    // Validamos que haya puesto nombre Y seleccionado un país
+    // Validamos que haya puesto nombre Y seleccionado un pais
     if (_nameController.text.trim().isEmpty || _selectedCountry == null) return;
 
     final prefs = await SharedPreferences.getInstance();

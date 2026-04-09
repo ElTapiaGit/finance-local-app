@@ -31,7 +31,6 @@ class _SaveButtonState extends State<SaveButton> {
       await widget.onPressed();
       
     } catch (e) {
-      //debugPrint("Error en SaveButton: $e");
       // Si fallo
       if (mounted) {
         final isDarkMode = Theme.of(context).brightness == Brightness.dark;

@@ -4,6 +4,8 @@ import 'package:intl/intl.dart'; // Para fechas
 import '../main.dart'; 
 import '../services/database_service.dart';
 import '../models/transaction_model.dart';
+import '../utils/custom_snackbar.dart';
+import '../widgets/export_bottom_sheet.dart';
 import '../widgets/add_transaction_modal.dart';
 import '../utils/currency_format.dart';
 
@@ -155,6 +157,44 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     _loadMoreData(force: true);
   }
 
+  // prepara y abre el modal para descargar
+  Future<void> _openExportModal() async {
+    // 1. Mostramos un pequeño indicador de carga por si la DB es gigante
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      // 2. Traemos TODA la base de datos (no solo los 20 paginados)
+      final allData = await _dbService.getAllTransactions();
+      
+      if (mounted) {
+        Navigator.pop(context); // Cerramos el indicador de carga
+        
+        // 3. Abrimos el modal pasándole todos los datos
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent, // Para respetar los bordes redondeados del modal
+          builder: (context) => ExportBottomSheet(allTransactions: allData),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Cerramos el indicador de carga
+        CustomSnackBar.show(
+          context: context,
+          message: "Error al preparar la exportación",
+          icon: Icons.error_outline_rounded,
+          backgroundColor: Colors.red.shade700,
+          iconColor: Colors.white,
+        );
+      }
+    }
+  }
+
   Future<void> _handleEdit(TransactionModel tx) async {
     await showModalBottomSheet(
       context: context,
@@ -172,11 +212,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   Future<bool> _handleDelete(TransactionModel tx) async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     if (_isPeriodLocked(tx.date)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Periodo cerrado. No puedes eliminar transacciones antiguas."),
-          backgroundColor: Colors.orange,
-        ),
+      CustomSnackBar.show(
+        context: context,
+        message: "Periodo cerrado. No puedes eliminar transacciones antiguas.",
+        icon: Icons.lock_rounded,
+        backgroundColor: Colors.orange.shade700,
+        iconColor: Colors.white,
+        durationSeconds: 4,
       );
       return false; 
     }
@@ -215,8 +257,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Transacción eliminada"), duration: Duration(seconds: 2))
+        CustomSnackBar.show(
+          context: context,
+          message: "Transacción eliminada",
+          icon: Icons.delete_outline_rounded,
         );
       }
       return true;
@@ -360,6 +404,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.download_rounded, color: Colors.grey),
+            tooltip: "Exportar a Excel",
+            onPressed: _openExportModal,
+          ),
           // boton para limpiar filtros si hay alguno activo
           if (_searchText.isNotEmpty || _filterDate != null)
             IconButton(

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart'; // Para AppColors
 import '../utils/currency_format.dart';
-import '../utils/country_data.dart'; // Usamos tu nuevo archivo centralizado
+import '../utils/country_data.dart'; 
 
 class SettingsModal extends StatefulWidget {
   final String initialUserName;
@@ -27,7 +27,7 @@ class _SettingsModalState extends State<SettingsModal> {
     super.initState();
     _nameController = TextEditingController(text: widget.initialUserName);
     
-    // Buscar el país seleccionado actualmente
+    // Buscar el pais seleccionado actualmente
     try {
       _selectedCountry = CountryData.countries.firstWhere(
         (c) => c['symbol'] == CurrencyFormat.currencySymbol

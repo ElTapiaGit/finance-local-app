@@ -139,6 +139,8 @@ class DatabaseService {
     required int dayOfMonth,
     required int color,
     required int icon,
+    required int hour,  
+    required int minute,
   }) async {
     final reminder = ReminderModel()
       ..title = title
@@ -146,7 +148,9 @@ class DatabaseService {
       ..dayOfMonth = dayOfMonth
       ..isActive = true
       ..colorValue = color
-      ..iconCode = icon;
+      ..iconCode = icon
+      ..hour = hour    
+      ..minute = minute;
 
     return await reminderBox.add(reminder); 
   }

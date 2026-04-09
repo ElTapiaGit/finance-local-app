@@ -25,7 +25,6 @@ class ExpensesBarChart extends StatelessWidget {
     }
 
     // Calculamos el gasto maximo para escalar el grafico (eje Y)
-    // Le agregamos un 20% extra para que la barra mas alta no toque el techo
     final double maxY = topCategories.first.totalAmount * 1.2; 
 
     return BarChart(
@@ -151,7 +150,7 @@ class ExpensesBarChart extends StatelessWidget {
     return sortedList.take(5).toList();
   }
 
-  // Formateador simple para números (ej: 1500 -> 1.5k)
+  // Formateador simple para numeros (ej: 1500 -> 1.5k)
   String _formatCompact(double amount) {
     if (amount >= 1000) {
       return '${(amount / 1000).toStringAsFixed(1)}k';
