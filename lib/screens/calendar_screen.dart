@@ -333,22 +333,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     // CAMBIO DE COLORES DEL BOTON
     final buttonColor = isDarkMode ? AppColors.primary : AppColors.primaryLight;
     final buttonTextColor = isDarkMode ? Colors.black : Colors.white;
-    
-    // red de seguridad pa usuarios antiguos
-    int displayHour = 9;
-    int displayMinute = 0;
-    try {
-      // leemos la hora nueva
-      displayHour = rem.hour;
-      displayMinute = rem.minute;
-    } catch (e) {
-      // Si entra al 'catch', significa que es un recordatorio viejo (previo a la actualizacion).
-      // El error se silencia y se usaran las 09:00 por defecto para no romper la pantalla.
-    }
 
     // Se asegura de ponerle un '0' a la izquierda si es un solo digito (ej: 9 -> 09)
-    final timeText = "${displayHour.toString().padLeft(2, '0')}:${displayMinute.toString().padLeft(2, '0')}";
-    
+    final timeText = "${rem.hour.toString().padLeft(2, '0')}:${rem.minute.toString().padLeft(2, '0')}";
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),

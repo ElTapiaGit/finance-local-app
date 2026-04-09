@@ -24,8 +24,8 @@ class ReminderModelAdapter extends TypeAdapter<ReminderModel> {
       ..colorValue = fields[4] as int
       ..iconCode = fields[5] as int
       ..createdAt = fields[6] as DateTime
-      ..hour = fields[7] as int
-      ..minute = fields[8] as int;
+      ..hour = fields[7] == null ? 9 : fields[7] as int
+      ..minute = fields[8] == null ? 0 : fields[8] as int;
   }
 
   @override

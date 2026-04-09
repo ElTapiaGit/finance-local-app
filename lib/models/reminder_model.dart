@@ -28,9 +28,9 @@ class ReminderModel extends HiveObject {
   @HiveField(6)
   DateTime createdAt = DateTime.now();
 
-  @HiveField(7)
-  late int hour; // Ej: 14 (2 PM)
+  @HiveField(7, defaultValue: 9)
+  int hour = 9; // Ej: 14 (2 PM)
 
-  @HiveField(8)
-  late int minute; // Ej: 30
+  @HiveField(8, defaultValue: 0)
+  int minute = 0; // Ej: 30
 }
