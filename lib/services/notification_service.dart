@@ -3,6 +3,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'dart:io';
+import 'package:permission_handler/permission_handler.dart';
 import '../main.dart'; 
 
 class NotificationService {
@@ -53,13 +54,27 @@ class NotificationService {
       },
     );
     
-    // PEDIR PERMISO EN ANDROID 13+ 
+    /*/ PEDIR PERMISO EN ANDROID 13+,
     if (Platform.isAndroid) {
       await flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
           ?.requestNotificationsPermission();
-    }
+    }*/
   }
+
+  // ADUANA DE PERMISOS
+  Future<bool> _requestNotificationPermission() async {
+    if (Platform.isAndroid) {
+      var status = await Permission.notification.status;
+      if (!status.isGranted) {
+        // Muestra el cuadro de diálogo de Android pidiendo permiso
+        status = await Permission.notification.request();
+      }
+      return status.isGranted;
+    }
+    return true; // En iOS se maneja automático con initializationSettingsDarwin
+  }
+
   //FUNCIONES DE LECTURA
   // Verificar si la app se abrio desde una notificacion cerrada
   Future<String?> getPendingNotificationPayload() async {
@@ -81,7 +96,15 @@ class NotificationService {
     int hour = 9,  
     int minute = 0, 
   }) async {
-    // constante de detalle de notificaciones
+    // ANTES de programar, pedimos el permiso amablemente.
+    bool hasPermission = await _requestNotificationPermission();
+    
+    // Si el usuario nos niega el permiso, abortamos la programacion
+    if (!hasPermission) {
+      return; 
+    }
+
+    // si hay permiso, constante de detalle de notificaciones
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'monthly_reminders_v19', // Canal ID
       'Recordatorios Mensuales', 

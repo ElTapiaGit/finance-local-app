@@ -4,6 +4,7 @@ import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../models/transaction_model.dart';
 import '../utils/currency_format.dart'; 
 
@@ -17,6 +18,17 @@ class ExportService {
         .replaceAll('ó', 'o').replaceAll('Ó', 'O')
         .replaceAll('ú', 'u').replaceAll('Ú', 'U')
         .replaceAll('ñ', 'n').replaceAll('Ñ', 'N');
+  }
+
+  // para permisos de almacenamiento (dispositivos < android 10)
+  static Future<bool> _requestStoragePermission() async {
+    if (Platform.isAndroid) {
+      // Pedimos el permiso de almacenamiento
+      await Permission.storage.request(); // en android 11+ la ignorara
+
+      return true;
+    }
+    return true; // En iOS no solemos pedir esto para la carpeta de documentos interna
   }
 
   static Future<String?> exportToCSV(List<TransactionModel> transactions, String monthLabel, {bool share = true}) async {
@@ -47,6 +59,7 @@ class ExportService {
     final fileName = "Reporte_Gastos_${monthLabel.replaceAll(' ', '_')}_$timestamp.csv";
 
     if (share) {
+      // NOTA: pa compartir (Share), guardamos en la carpeta temporal
       final tempDir = await getTemporaryDirectory();
       final filePath = '${tempDir.path}/$fileName';
       final file = File(filePath);
@@ -57,9 +70,18 @@ class ExportService {
       return null; 
     
     } else {
+      // descarga directa (considera android viejos)
       Directory? targetDir;
       
       if (Platform.isAndroid) {
+        // ANTES de intentar guardar, verificamos que el usuario nos dé permiso.
+        bool hasPermission = await _requestStoragePermission();
+
+        if (!hasPermission) {
+          // Si el usuario nos nego el permiso, lanzamos un error que tu UI debe atrapar
+          throw Exception("Permiso de almacenamiento denegado. No se puede guardar el archivo.");
+        }
+        // si tenemos permiso buscamos la carpeta de descarga
         targetDir = Directory('/storage/emulated/0/Download');
         if (!await targetDir.exists()) {
           targetDir = await getExternalStorageDirectory(); 
