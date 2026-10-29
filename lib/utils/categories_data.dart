@@ -37,4 +37,24 @@ class CategoryData {
         .where((cat) => reminderAllowedNames.contains(cat['name']))
         .toList();
   }
+
+  /// Obtiene la descripcion o ayuda contextual para una categoria por su nombre.
+  static String getDescription(String name) {
+    try {
+      final match = allCategories.firstWhere((c) => c['name'] == name);
+      return match['desc'] as String? ?? 'Categoría personalizada';
+    } catch (_) {
+      return 'Categoría personalizada';
+    }
+  }
+
+  /// Obtiene un texto de ejemplo sugerido para una categoria por su nombre.
+  static String getExample(String name) {
+    try {
+      final match = allCategories.firstWhere((c) => c['name'] == name);
+      return match['example'] as String? ?? name;
+    } catch (_) {
+      return name;
+    }
+  }
 }
