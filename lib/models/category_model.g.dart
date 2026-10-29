@@ -16,11 +16,12 @@ class CategoryModelAdapter extends TypeAdapter<CategoryModel> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return CategoryModel()
-      ..name = fields[0] as String
-      ..iconName = fields[1] as String
-      ..colorHex = fields[2] as String
-      ..isCustom = fields[3] as bool;
+    return CategoryModel(
+      name: fields[0] as String,
+      iconCode: fields[1] as int,
+      colorValue: fields[2] as int,
+      isCustom: fields[3] as bool,
+    );
   }
 
   @override
@@ -30,9 +31,9 @@ class CategoryModelAdapter extends TypeAdapter<CategoryModel> {
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
-      ..write(obj.iconName)
+      ..write(obj.iconCode)
       ..writeByte(2)
-      ..write(obj.colorHex)
+      ..write(obj.colorValue)
       ..writeByte(3)
       ..write(obj.isCustom);
   }

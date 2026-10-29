@@ -1,37 +1,108 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/transaction_model.dart';
 import '../models/reminder_model.dart';
+import '../models/category_model.dart';
+import '../utils/categories_data.dart';
 import '../utils/math_utils.dart';
 
 class DatabaseService {
-  // PATRON SINGLETON
+  // Patron Singleton
   static final DatabaseService _instance = DatabaseService._internal();
   factory DatabaseService() => _instance;
   DatabaseService._internal();
 
   Box<TransactionModel> get transactionBox => Hive.box<TransactionModel>('transactions');
   Box<ReminderModel> get reminderBox => Hive.box<ReminderModel>('reminders');
+  Box<CategoryModel> get categoryBox => Hive.box<CategoryModel>('categories');
 
-  // INICIALIZACION: solo registra adaptadores y abre las cajas
+  // Inicializacion: registra adaptadores, abre las cajas y realiza el sembrado inicial
   Future<void> init() async {
-    if (Hive.isBoxOpen('transactions')) {
-      return;
+    if (!Hive.isAdapterRegistered(0)) {
+      Hive.registerAdapter(TransactionModelAdapter());
+    }
+    if (!Hive.isAdapterRegistered(1)) {
+      Hive.registerAdapter(TransactionTypeAdapter());
+    }
+    if (!Hive.isAdapterRegistered(2)) {
+      Hive.registerAdapter(ReminderModelAdapter());
+    }
+    if (!Hive.isAdapterRegistered(3)) {
+      Hive.registerAdapter(CategoryModelAdapter());
     }
 
-    // Registrar Adaptadores generados por build_runner
-    Hive.registerAdapter(TransactionModelAdapter());
-    Hive.registerAdapter(TransactionTypeAdapter()); 
-    Hive.registerAdapter(ReminderModelAdapter());
+    if (!Hive.isBoxOpen('transactions')) {
+      await Hive.openBox<TransactionModel>('transactions');
+    }
+    if (!Hive.isBoxOpen('categories')) {
+      await Hive.openBox<CategoryModel>('categories');
+    }
+    if (!Hive.isBoxOpen('reminders')) {
+      await Hive.openBox<ReminderModel>('reminders');
+    }
 
-    // Abrir todas las cajas (Boxes)
-    await Hive.openBox<TransactionModel>('transactions');
-    await Hive.openBox<ReminderModel>('reminders');
+    await seedCategoriesIfEmpty();
   }
 
-  // METODOS PARA TRANSACCIONES 
+  // Sembrado de categorias maestras si la caja esta vacia
+  Future<void> seedCategoriesIfEmpty() async {
+    if (categoryBox.isEmpty) {
+      for (final cat in CategoryData.allCategories) {
+        final color = (cat['color'] as Color).value;
+        final icon = (cat['icon'] as IconData).codePoint;
+        final newCategory = CategoryModel(
+          name: cat['name'] as String,
+          iconCode: icon,
+          colorValue: color,
+          isCustom: false,
+        );
+        await categoryBox.add(newCategory);
+      }
+    }
+  }
 
-  // FUNCION PARA GUARDAR TRANSACCION
+  // Metodos para Categorias
+  Stream<List<CategoryModel>> listenToCategories() {
+    final controller = StreamController<List<CategoryModel>>();
+
+    void updateListener() {
+      final list = categoryBox.values.toList();
+      controller.add(list);
+    }
+
+    updateListener();
+
+    categoryBox.listenable().addListener(updateListener);
+
+    controller.onCancel = () {
+      categoryBox.listenable().removeListener(updateListener);
+      controller.close();
+    };
+
+    return controller.stream.asBroadcastStream();
+  }
+
+  Future<List<CategoryModel>> getAllCategories() async {
+    return categoryBox.values.toList();
+  }
+
+  Future<void> saveCategory({
+    required String name,
+    required int iconCode,
+    required int colorValue,
+    bool isCustom = true,
+  }) async {
+    final category = CategoryModel(
+      name: name,
+      iconCode: iconCode,
+      colorValue: colorValue,
+      isCustom: isCustom,
+    );
+    await categoryBox.add(category);
+  }
+
+  // Metodos para Transacciones
   Future<void> saveTransaction({
     required String title,
     required double amount,
@@ -53,17 +124,13 @@ class DatabaseService {
       ..categoryColor = categoryColor
       ..categoryIconCode = categoryIcon;
 
-
     await transactionBox.add(newTx); 
   }
 
-  // FUNCION PARA ESCUCHAR TODAS LAS TRANSACCIONES (Para el Home)
   Stream<List<TransactionModel>> listenToTransactions() {
-    // Creamos un ValueListenable, que Hive proporciona para escuchar cambios.
     final controller = StreamController<List<TransactionModel>>();
 
     void updateListener() {
-      // Logica de obtencion y ordenacion de la lista
       final list = transactionBox.values.toList();
       list.sort((a, b) => b.date.compareTo(a.date));
 
@@ -72,20 +139,16 @@ class DatabaseService {
     
     updateListener(); 
 
-    // ESCUCHA DE CAMBIOS
     transactionBox.listenable().addListener(updateListener);
 
-    // para evitar fugas de memoria
     controller.onCancel = () {
       transactionBox.listenable().removeListener(updateListener);
       controller.close();
     };
 
     return controller.stream.asBroadcastStream();
-
   }
 
-  // CALCULAR SALDO TOTAL HISTORICO
   Future<double> getTotalBalance() async {
     final transactions = transactionBox.values.toList();
     
@@ -100,14 +163,11 @@ class DatabaseService {
     return totalIncome - totalExpense;
   }
 
-  // PARA LISTA DE TRANSACCIONES con paginacion de 20
   Future<List<TransactionModel>> getTransactionsPaginated({required int offset, int limit = 20}) async {
     final allTransactions = transactionBox.values.toList();
     
-    // Ordenar primero (descendente)
     allTransactions.sort((a, b) => b.date.compareTo(a.date));
 
-    // Aplicar paginación manualmente
     final end = (offset + limit) > allTransactions.length 
         ? allTransactions.length 
         : (offset + limit);
@@ -119,20 +179,17 @@ class DatabaseService {
     return allTransactions.sublist(offset, end);
   }
 
-  // Obtener todo el historial de una (Para filtros y busquedas)
   Future<List<TransactionModel>> getAllTransactions() async {
     final list = transactionBox.values.toList();
-    // Ordenar por fecha descendente 
     list.sort((a, b) => b.date.compareTo(a.date));
     return list;
   }
 
-  // ELIMINAR TRANSACCION (Usando el ID/Key de Hive)
   Future<void> deleteTransaction(int key) async {
     await transactionBox.delete(key); 
   }
 
-  // METODOS PARA RECORDATORIOS 
+  // Metodos para Recordatorios
   Future<int> saveReminderAndReturnId({
     required String title,
     required double amount,
@@ -155,39 +212,33 @@ class DatabaseService {
     return await reminderBox.add(reminder); 
   }
   
-  // Obtener todos los recordatorios activos
   Future<List<ReminderModel>> getActiveReminders() async {
     return reminderBox.values
         .where((r) => r.isActive == true)
         .toList();
   }
 
-  // Cancelar suscripcion (Borrar o desactivar)
   Future<void> toggleReminderStatus(int key, bool status) async {
-    final reminder = reminderBox.get(key); // Usamos la key como ID
+    final reminder = reminderBox.get(key);
     if (reminder != null) {
       reminder.isActive = status;
       await reminder.save(); 
     }
   }
   
-  // Escuchar cambios en recordatorios
   Stream<List<ReminderModel>> listenToReminders() {
     final controller = StreamController<List<ReminderModel>>();
     void emitReminders() {
-      // Obtenemos todos los datos y los mandamos al Stream
       final reminders = reminderBox.values.toList();
       controller.add(reminders);
     }
     
     emitReminders();
 
-    // Escuchar cambios futuros en la caja
     final subscription = reminderBox.watch().listen((event) {
       emitReminders();
     });
 
-    // Limpiar recursos al cerrar
     controller.onCancel = () {
       subscription.cancel();
       controller.close();
@@ -196,7 +247,6 @@ class DatabaseService {
     return controller.stream;
   }
 
-  // METODOS AUXILIARES 
   Future<void> deleteReminder(int key) async {
     await reminderBox.delete(key);
   }

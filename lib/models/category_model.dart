@@ -1,21 +1,25 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
-part 'category_model.g.dart'; 
+part 'category_model.g.dart';
 
-// Asignamos el typeId 3, ya que 0, 1 y 2 se usaron anteriormente.
 @HiveType(typeId: 3)
 class CategoryModel extends HiveObject {
-
   @HiveField(0)
-  late String name; // Ej: "Comida", "Transporte"
+  late String name;
 
   @HiveField(1)
-  late String iconName; // Ej: "utensils", "bus" (FontAwesome)
+  late int iconCode;
 
   @HiveField(2)
-  late String colorHex; // Ej: "FF5733"
-  
-  // Hive soporta campos con valor por defecto
+  late int colorValue;
+
   @HiveField(3)
-  bool isCustom = false; // false = por defecto, true = creada por usuario
+  bool isCustom = false;
+
+  CategoryModel({
+    this.name = '',
+    this.iconCode = 0,
+    this.colorValue = 0,
+    this.isCustom = false,
+  });
 }
