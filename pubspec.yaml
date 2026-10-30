@@ -24,10 +24,12 @@ dependencies:
   fl_chart: ^0.66.2 
   firebase_core: ^4.2.1
   firebase_analytics: ^12.0.4
-  csv: ^6.0.0
   share_plus: ^11.1.0
   open_filex: ^4.4.0
   permission_handler: ^12.0.1 # gestiona permisos en tiempo de ejecucion
+  pdf: ^3.11.1
+  printing: ^5.13.2
+  excel: ^4.0.6
 
 dev_dependencies:
   flutter_test:

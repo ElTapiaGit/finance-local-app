@@ -4,8 +4,9 @@ import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import '../models/transaction_model.dart';
 import '../services/export_service.dart';
+import '../services/pdf_export_service.dart';
 import '../utils/custom_snackbar.dart';
-import '../main.dart'; 
+import '../main.dart';
 
 class ExportBottomSheet extends StatefulWidget {
   final List<TransactionModel> allTransactions;
@@ -30,7 +31,7 @@ class _ExportBottomSheetState extends State<ExportBottomSheet> {
 
   void _extractAvailableMonths() {
     final Set<String> uniqueKeys = {};
-    
+
     for (var tx in widget.allTransactions) {
       final key = '${tx.date.year}-${tx.date.month}';
       if (!uniqueKeys.contains(key)) {
@@ -49,61 +50,103 @@ class _ExportBottomSheetState extends State<ExportBottomSheet> {
     }
   }
 
-  Future<void> _handleExport(bool isShare) async {
+  Future<void> _handlePdfExport() async {
     if (_selectedMonth == null) return;
-    
+
     setState(() => _isExporting = true);
-    
+
     try {
       final filteredTx = widget.allTransactions.where((tx) {
         return tx.date.year == _selectedMonth!.year &&
-              tx.date.month == _selectedMonth!.month;
+            tx.date.month == _selectedMonth!.month;
       }).toList();
 
       String monthLabel = DateFormat('MMMM yyyy', 'es').format(_selectedMonth!);
       monthLabel = monthLabel[0].toUpperCase() + monthLabel.substring(1);
 
-      // Llamamos al servicio (ahora es seguro porque tiene timestamp)
-      final String? downloadedPath = await ExportService.exportToCSV(filteredTx, monthLabel, share: isShare);
+      await PdfExportService.generateAndPrintReport(
+        filteredTx,
+        monthLabel,
+        _selectedMonth,
+      );
 
       if (mounted) {
-        Navigator.pop(context); 
-      
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        CustomSnackBar.show(
+          context: context,
+          message: "Error al generar el reporte PDF.",
+          icon: Icons.error_rounded,
+          backgroundColor: Colors.red.shade700,
+          iconColor: Colors.white,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isExporting = false);
+      }
+    }
+  }
+
+  Future<void> _handleExport(bool isShare) async {
+    if (_selectedMonth == null) return;
+
+    setState(() => _isExporting = true);
+
+    try {
+      final filteredTx = widget.allTransactions.where((tx) {
+        return tx.date.year == _selectedMonth!.year &&
+            tx.date.month == _selectedMonth!.month;
+      }).toList();
+
+      String monthLabel = DateFormat('MMMM yyyy', 'es').format(_selectedMonth!);
+      monthLabel = monthLabel[0].toUpperCase() + monthLabel.substring(1);
+
+      final String? downloadedPath =
+          await ExportService.exportToExcel(filteredTx, monthLabel, share: isShare);
+
+      if (mounted) {
+        Navigator.pop(context);
+
         final isDark = Theme.of(context).brightness == Brightness.dark;
-      
+
         CustomSnackBar.show(
           context: context,
           message: isShare ? "Opciones de compartir listas" : "Archivo descargado",
           icon: isShare ? Icons.share_rounded : Icons.check_circle_rounded,
-          backgroundColor: isShare 
-              ? (isDark ? AppColors.primaryLight : Colors.blue.shade600) 
-              : null, 
-          durationSeconds: 5, 
-          
-          action: downloadedPath != null 
-            ? SnackBarAction(
-                label: "ABRIR",
-                textColor: isDark ? Colors.black : Colors.white,
-                onPressed: () async {
-                  // Forza el MIME type para que Android entienda que app usar
-                  final result = await OpenFilex.open(downloadedPath, type: 'text/csv');
-                  
-                  if (result.type != ResultType.done && context.mounted) {
-                    CustomSnackBar.show(
-                      context: context,
-                      message: "Búscalo en tu carpeta de Descargas",
-                      icon: Icons.folder_open_rounded,
-                      backgroundColor: Colors.orange.shade700,
+          backgroundColor: isShare
+              ? (isDark ? AppColors.primaryLight : Colors.blue.shade600)
+              : null,
+          durationSeconds: 5,
+          action: downloadedPath != null
+              ? SnackBarAction(
+                  label: "ABRIR",
+                  textColor: isDark ? Colors.black : Colors.white,
+                  onPressed: () async {
+                    final result = await OpenFilex.open(
+                      downloadedPath,
+                      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                     );
-                  }
-                },
-              )
-            : null,
+
+                    if (result.type != ResultType.done && context.mounted) {
+                      CustomSnackBar.show(
+                        context: context,
+                        message: "Búscalo en tu carpeta de Descargas",
+                        icon: Icons.folder_open_rounded,
+                        backgroundColor: Colors.orange.shade700,
+                      );
+                    }
+                  },
+                )
+              : null,
         );
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context); // Cerramos el modal
+        Navigator.pop(context);
         CustomSnackBar.show(
           context: context,
           message: "Error al exportar. Revisa los permisos de tu celular.",
@@ -114,7 +157,7 @@ class _ExportBottomSheetState extends State<ExportBottomSheet> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isExporting = false); 
+        setState(() => _isExporting = false);
       }
     }
   }
@@ -128,54 +171,71 @@ class _ExportBottomSheetState extends State<ExportBottomSheet> {
 
     return Container(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).padding.bottom + 20, 
+        bottom: MediaQuery.of(context).padding.bottom + 20,
         left: 24,
         right: 24,
-        top: 20
+        top: 20,
       ),
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24))
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min, 
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 40, height: 4,
-            decoration: BoxDecoration(color: Colors.grey[400], borderRadius: BorderRadius.circular(2)),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[400],
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
           const SizedBox(height: 20),
-          
-          Text("Exportar Reporte", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
+          Text(
+            "Exportar Reporte",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
           const SizedBox(height: 24),
 
-          // SELECTOR DE MES CORREGIDO 
+          // SELECTOR DE MES
           LayoutBuilder(
             builder: (context, constraints) {
               return DropdownMenu<DateTime>(
-                expandedInsets: EdgeInsets.zero, 
-                menuHeight: 250, 
-                requestFocusOnTap: false, 
-                enableFilter: false, 
+                expandedInsets: EdgeInsets.zero,
+                menuHeight: 250,
+                requestFocusOnTap: false,
+                enableFilter: false,
                 enableSearch: false,
                 initialSelection: _selectedMonth,
-                hintText: "Selecciona el mes", 
+                hintText: "Selecciona el mes",
                 textStyle: TextStyle(color: textColor, fontSize: 16),
-                
                 menuStyle: MenuStyle(
-                  backgroundColor: WidgetStateProperty.all<Color>(isDark ? AppColors.cardDark : Colors.white),
+                  backgroundColor: WidgetStateProperty.all<Color>(
+                    isDark ? AppColors.cardDark : Colors.white,
+                  ),
                   shape: WidgetStateProperty.all<OutlinedBorder>(
-                    RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
-                
                 inputDecorationTheme: InputDecorationTheme(
                   filled: true,
                   fillColor: isDark ? Colors.white10 : Colors.grey.shade200,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                 ),
-                
                 dropdownMenuEntries: _availableMonths.map((month) {
                   String label = DateFormat('MMMM yyyy', 'es').format(month);
                   label = label[0].toUpperCase() + label.substring(1);
@@ -187,22 +247,53 @@ class _ExportBottomSheetState extends State<ExportBottomSheet> {
                     ),
                   );
                 }).toList(),
-                
                 onSelected: (val) {
                   if (val != null) setState(() => _selectedMonth = val);
                 },
               );
-            }
+            },
           ),
           const SizedBox(height: 30),
 
-          // BOTONES DIVIDIDOS DESCARGAR Y COMPARTIR
+          // BOTONES DE ACCIONES
           if (_isExporting)
             const SizedBox(
-              height: 55, 
-              child: Center(child: CircularProgressIndicator())
+              height: 55,
+              child: Center(child: CircularProgressIndicator()),
             )
-          else
+          else ...[
+            // BOTON GENERAR REPORTE PDF
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton.icon(
+                onPressed: widget.allTransactions.isEmpty
+                    ? null
+                    : _handlePdfExport,
+                icon: Icon(
+                  Icons.picture_as_pdf_rounded,
+                  color: btnTextColor,
+                ),
+                label: Text(
+                  "Generar Reporte PDF",
+                  style: TextStyle(
+                    color: btnTextColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: btnBgColor,
+                  disabledBackgroundColor: Colors.grey.shade600,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // BOTONES DIVIDIDOS DESCARGAR Y COMPARTIR EXCEL
             Row(
               children: [
                 // BOTON SOLO DESCARGAR
@@ -210,46 +301,70 @@ class _ExportBottomSheetState extends State<ExportBottomSheet> {
                   child: SizedBox(
                     height: 55,
                     child: ElevatedButton.icon(
-                      onPressed: widget.allTransactions.isEmpty ? null : () => _handleExport(false),
+                      onPressed: widget.allTransactions.isEmpty
+                          ? null
+                          : () => _handleExport(false),
                       icon: Icon(Icons.download_rounded, color: btnTextColor),
                       label: Text(
-                        "Descargar", 
-                        style: TextStyle(color: btnTextColor, fontWeight: FontWeight.bold, fontSize: 15)
+                        "Descargar Excel",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: btnTextColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: btnBgColor,
                         disabledBackgroundColor: Colors.grey.shade600,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                // BOTON 2 COMPARTIR
+                // BOTON COMPARTIR
                 Expanded(
                   child: SizedBox(
                     height: 55,
                     child: OutlinedButton.icon(
-                      onPressed: widget.allTransactions.isEmpty ? null : () => _handleExport(true),
+                      onPressed: widget.allTransactions.isEmpty
+                          ? null
+                          : () => _handleExport(true),
                       icon: Icon(Icons.share_rounded, color: btnBgColor),
                       label: Text(
-                        "Compartir", 
-                        style: TextStyle(color: btnBgColor, fontWeight: FontWeight.bold, fontSize: 15)
+                        "Compartir Excel",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: btnBgColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: btnBgColor, width: 2),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ],
             ),
-          
+          ],
+
           if (widget.allTransactions.isEmpty) ...[
             const SizedBox(height: 12),
-            const Text("No hay datos registrados para exportar.", style: TextStyle(color: Colors.redAccent, fontSize: 12)),
-          ]
+            const Text(
+              "No hay datos registrados para exportar.",
+              style: TextStyle(color: Colors.redAccent, fontSize: 12),
+            ),
+          ],
         ],
       ),
     );
