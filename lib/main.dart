@@ -23,14 +23,14 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized(); 
   
   await Hive.initFlutter();
-  //debugPrint("✅ Hive inicializado correctamente.");
+  //debugPrint("Hive inicializado correctamente.");
   try {
     // Inicializar Firebase
     await Firebase.initializeApp();
     analytics = FirebaseAnalytics.instance; // Guardamos la instancia
-    //debugPrint("✅ Firebase inicializado correctamente");
+    //debugPrint("Firebase inicializado correctamente");
   } catch (e) {
-    //debugPrint("⚠️ Error inicializando Firebase: $e");
+    //debugPrint("Error inicializando Firebase: $e");
     // La app continuará funcionando aunque Firebase falle (offline mode implícito)
   }
 
@@ -205,7 +205,7 @@ class _SplashScreenState extends State<SplashScreen> {
       }
       
     } catch (e) {
-      //debugPrint("❌ Error inicializando: $e");
+      //debugPrint("Error inicializando: $e");
       // Si falla algo, por seguridad mandamos al Home o reintentamos
       if (mounted) {
          Navigator.of(context).pushReplacement(

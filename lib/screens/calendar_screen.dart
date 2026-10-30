@@ -99,7 +99,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   // CONTENIDO SCROLLABLE (Calendario + Lista) 
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        0,
+                        16,
+                        16 + MediaQuery.paddingOf(context).bottom,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -144,7 +149,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
                           // LISTA DE EVENTOS
                           _buildCombinedList(transactions, reminders, isDarkMode),
-                          const SizedBox(height: 80),
+
                         ],
                       ),
                     ),

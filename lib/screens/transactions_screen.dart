@@ -8,6 +8,7 @@ import '../utils/custom_snackbar.dart';
 import '../widgets/export_bottom_sheet.dart';
 import '../widgets/add_transaction_modal.dart';
 import '../utils/currency_format.dart';
+import '../utils/period_lock_helper.dart';
 
 class TransactionsScreen extends StatefulWidget {
   final bool isTab;
@@ -29,8 +30,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   static final DateFormat _chipDayFormat = DateFormat('dd', 'es');
   static final DateFormat _chipMonthFormat = DateFormat('MMMM', 'es');
   static final DateFormat _timeFormat = DateFormat('HH:mm');
-  // ESTADO DE PAGINACION 
+  // ESTADO DE PAGINACION Y MEMOIZACION
   List<TransactionModel> _transactions = []; 
+  List<dynamic> _groupedTransactions = [];
   bool _isLoading = false;
   bool _hasMoreData = true; //vwrifica si aun hay datos en bd
   int _currentOffset = 0;
@@ -66,7 +68,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   @override
   void dispose() { //cancelamos todo cuando salga de la visa
     _dbSubscription?.cancel();
-    _dbSubscription?.cancel();
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -91,6 +92,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         if (mounted) {
           setState(() {
             _transactions = filtered;
+            _groupedTransactions = _groupTransactionsByDate(_transactions);
             _hasMoreData = false; 
             _isLoading = false; 
           });
@@ -110,6 +112,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             _hasMoreData = false; 
           }
           _transactions.addAll(newItems);
+          _groupedTransactions = _groupTransactionsByDate(_transactions);
           _currentOffset += newItems.length;
           _isLoading = false; 
         });
@@ -148,6 +151,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     
     setState(() {
       _transactions.clear();
+      _groupedTransactions.clear();
       _currentOffset = 0;
       final bool isFiltering = _searchText.isNotEmpty || _filterDate != null;
       _hasMoreData = !isFiltering;
@@ -211,7 +215,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
   Future<bool> _handleDelete(TransactionModel tx) async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    if (_isPeriodLocked(tx.date)) {
+    if (PeriodLockHelper.isPeriodLocked(tx.date)) {
       CustomSnackBar.show(
         context: context,
         message: "Periodo cerrado. No puedes eliminar transacciones antiguas.",
@@ -247,6 +251,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
       setState(() {
         _transactions.removeWhere((item) => item.key == tx.key);
+        _groupedTransactions = _groupTransactionsByDate(_transactions);
       });
 
       await _dbService.deleteTransaction(tx.key);
@@ -266,21 +271,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       return true;
     }
     return false;
-  }
-
-  //candado 
-  bool _isPeriodLocked(DateTime transactionDate) {
-    final now = DateTime.now();
-    //si es el mismo mes y año actual, no bloquea
-    if (transactionDate.year == now.year && transactionDate.month == now.month) {
-      return false;
-    }
-    //si es de mes pasado verificar dia de gracia 3
-    if (now.day >= 4) {
-      return true; //bloqueo
-    }
-    // estar en los dias de gracia
-    return false; //permitir editar
   }
 
   // UI HERPERS
@@ -381,7 +371,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final activeCalendarColor = isDarkMode ? AppColors.primary : AppColors.primary.withValues(alpha: 0.4);
-    final groupedItems = _groupTransactionsByDate(_transactions);
     
     return Scaffold(
       appBar: AppBar(
@@ -535,18 +524,25 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   // Lista con Datos
                   return ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      0,
+                      16,
+                      widget.isTab
+                          ? 16
+                          : 16 + MediaQuery.paddingOf(context).bottom,
+                    ),
                     // +1 para el indicador de carga al final
-                    itemCount: groupedItems.length + (_hasMoreData ? 1 : 0),
+                    itemCount: _groupedTransactions.length + (_hasMoreData ? 1 : 0),
                     itemBuilder: (context, index) {
                       // Si llegamos al final y hay mas datos, mostramos loader
-                      if (index == groupedItems.length) {
+                      if (index == _groupedTransactions.length) {
                         return const Padding(
                           padding: EdgeInsets.symmetric(vertical: 20),
                           child: Center(child: CircularProgressIndicator()),
                         );
                       }
-                      final item = groupedItems[index];
+                      final item = _groupedTransactions[index];
 
                       if (item is String) {
                         return _buildDateHeader(context, item);
