@@ -8,7 +8,8 @@ import '../models/reminder_model.dart';
 import '../models/transaction_model.dart';
 import '../utils/custom_snackbar.dart';
 import '../widgets/add_transaction_modal.dart';
-import '../widgets/add_reminder_modal.dart'; // boton flotante
+import '../widgets/add_reminder_modal.dart';
+import '../widgets/shared_transaction_tile.dart'; // boton flotante
 import '../utils/currency_format.dart';
 import '../utils/period_lock_helper.dart';
 
@@ -575,7 +576,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
         }),
         
         // SEGUNDO: Las Transacciones (Historial de transacciones normales interactivo)
-        ...dayTxs.map((tx) => _buildTransactionItem(tx, isDarkMode)),
+        ...dayTxs.map(
+          (tx) => SharedTransactionTile(
+            transaction: tx,
+            onEdit: () => _handleEdit(tx),
+            onDelete: (direction) => _handleDelete(tx),
+          ),
+        ),
       ],
     );
   }
@@ -759,118 +766,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
         ],
       )
-    );
-  }
-
-  Widget _buildTransactionItem(TransactionModel tx, bool isDarkMode) {
-    final isIncome = tx.type == TransactionType.income;
-    final color = Color(tx.categoryColor);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Dismissible(
-        key: Key(tx.key.toString()),
-        direction: DismissDirection.horizontal,
-        background: Container(
-          decoration: BoxDecoration(
-            color: Colors.blue.shade600,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          alignment: Alignment.centerLeft,
-          padding: const EdgeInsets.only(left: 20),
-          child: const Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.edit, color: Colors.white, size: 20),
-              SizedBox(height: 2),
-              Text("Editar", style: TextStyle(color: Colors.white, fontSize: 10)),
-            ],
-          ),
-        ),
-        secondaryBackground: Container(
-          decoration: BoxDecoration(
-            color: Colors.red.shade600,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          alignment: Alignment.centerRight,
-          padding: const EdgeInsets.only(right: 20),
-          child: const Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.delete, color: Colors.white, size: 20),
-              SizedBox(height: 2),
-              Text("Eliminar", style: TextStyle(color: Colors.white, fontSize: 10)),
-            ],
-          ),
-        ),
-        confirmDismiss: (direction) async {
-          if (direction == DismissDirection.startToEnd) {
-            _handleEdit(tx);
-            return false;
-          } else {
-            return await _handleDelete(tx);
-          }
-        },
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => _handleEdit(tx),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      IconData(tx.categoryIconCode, fontFamily: 'MaterialIcons'),
-                      color: color,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          tx.title,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                            color: isDarkMode ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                        Text(
-                          DateFormat('HH:mm').format(tx.date),
-                          style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    "${isIncome ? '+' : '-'} ${CurrencyFormat.format(tx.amount)}",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: isIncome ? Colors.green : Colors.red.shade400,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 

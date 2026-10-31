@@ -18,7 +18,8 @@
     <application
         android:label="Finance Local"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon">
+        android:icon="@mipmap/launcher_icon"
+        android:requestLegacyExternalStorage="true">
         <meta-data
         android:name="com.google.firebase.messaging.default_notification_icon"
         android:resource="@mipmap/launcher_icon" />

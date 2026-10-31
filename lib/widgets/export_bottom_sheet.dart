@@ -1,4 +1,5 @@
 // ignore_for_file: use_build_context_synchronously
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
@@ -144,12 +145,27 @@ class _ExportBottomSheetState extends State<ExportBottomSheet> {
               : null,
         );
       }
+    } on FileSystemException catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        final detail = e.osError?.message ?? e.message;
+        CustomSnackBar.show(
+          context: context,
+          message: "Error de permisos al escribir en el almacenamiento: $detail",
+          icon: Icons.folder_off_rounded,
+          backgroundColor: Colors.red.shade700,
+          iconColor: Colors.white,
+        );
+      }
     } catch (e) {
       if (mounted) {
         Navigator.pop(context);
+        final errorMessage = e.toString().replaceFirst('Exception: ', '');
         CustomSnackBar.show(
           context: context,
-          message: "Error al exportar. Revisa los permisos de tu celular.",
+          message: isShare
+              ? "Error al compartir: $errorMessage"
+              : "Error al exportar: $errorMessage",
           icon: Icons.error_rounded,
           backgroundColor: Colors.red.shade700,
           iconColor: Colors.white,

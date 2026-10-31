@@ -8,6 +8,7 @@ import '../main.dart'; // Para AppColors
 import 'transactions_screen.dart'; 
 import 'calendar_screen.dart';
 import '../widgets/add_transaction_modal.dart';
+import '../widgets/shared_transaction_tile.dart';
 import '../services/database_service.dart';
 import '../models/transaction_model.dart';
 import '../widgets/expenses_bar_chart.dart';
@@ -369,10 +370,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          // Mismo fondo sutil adaptable al tema
-                          backgroundColor: Theme.of(context).brightness == Brightness.dark 
-                              ? Colors.white.withValues(alpha: 0.05) 
-                              : Colors.grey.shade200,
+                          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                         ),
                         child: Row(
@@ -406,15 +404,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   )
                 else 
                   ...transactions.take(5).map((tx) {
-                    final isIncome = tx.type == TransactionType.income;
-                    return _buildTransactionItem(
-                      context, 
-                      title: tx.title, 
-                      subtitle: tx.categoryName, 
-                      amount: "${isIncome ? '+' : '-'} ${CurrencyFormat.format(tx.amount)}", 
-                      icon: IconData(tx.categoryIconCode, fontFamily: 'MaterialIcons'), 
-                      color: Color(tx.categoryColor), 
-                      isIncome: isIncome
+                    return SharedTransactionTile(
+                      transaction: tx,
+                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      onEdit: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                          ),
+                          builder: (context) => AddTransactionModal(transactionToEdit: tx),
+                        );
+                      },
+                      onDelete: null,
                     );
                   }),
               ],
@@ -635,42 +639,6 @@ class _HomeScreenState extends State<HomeScreen> {
           )
         ),
       ],
-    );
-  }
-
-  // Item de Transaccion en la lista
-  Widget _buildTransactionItem(BuildContext context, {required String title, required String subtitle, required String amount, required IconData icon, required Color color, required bool isIncome}) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final textColorSecondary = isDarkMode ? AppColors.textGrayLight : Colors.grey[500];
-    Color amountColor;
-    
-    if (isIncome) {
-      // Si es INGRESO: Verde 
-      amountColor = isDarkMode ? AppColors.primary : AppColors.primaryLight;
-    } else {
-      // Si es GASTO: Rojo
-      amountColor = Colors.redAccent;
-    }
- 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        children: [
-          Container(width: 48, height: 48, decoration: BoxDecoration(color: color.withValues(alpha: 0.2), shape: BoxShape.circle), child: Icon(icon, color: color, size: 24)),
-          const SizedBox(width: 16),
-          //texto titulo y subtitulos
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start, 
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
-                Text(subtitle, style: TextStyle(color: textColorSecondary, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
-              ]
-            )
-          ),
-          Text(amount, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: amountColor)),
-        ],
-      ),
     );
   }
 }

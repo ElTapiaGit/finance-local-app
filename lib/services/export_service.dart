@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:excel/excel.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -32,13 +33,30 @@ class ExportService {
     }
   }
 
-  /// Gestiona la solicitud de permisos de almacenamiento en Android legacy.
+  /// Gestiona la verificacion y solicitud de permisos de almacenamiento en Android.
   static Future<bool> _requestStoragePermission() async {
-    if (Platform.isAndroid) {
-      await Permission.storage.request();
+    if (!Platform.isAndroid) return true;
+
+    try {
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      final sdkInt = androidInfo.version.sdkInt;
+
+      // En Android 13+ (API 33+), el permiso de almacenamiento clasico READ/WRITE_EXTERNAL_STORAGE
+      // ya no aplica para documentos genericos y se utiliza Scoped Storage.
+      if (sdkInt >= 33) {
+        return true;
+      }
+
+      // En Android 12 y versiones anteriores (API <= 32), se solicita permiso si no esta otorgado
+      final status = await Permission.storage.status;
+      if (status.isGranted) {
+        return true;
+      }
+      final result = await Permission.storage.request();
+      return result.isGranted;
+    } catch (_) {
       return true;
     }
-    return true;
   }
 
   /// Exporta la lista de transacciones a un libro de trabajo binario de Excel (.xlsx).
@@ -135,21 +153,50 @@ class ExportService {
 
       if (Platform.isAndroid) {
         final bool hasPermission = await _requestStoragePermission();
-        if (!hasPermission) {
-          throw Exception(
-            "Permiso de almacenamiento denegado. No se puede guardar el archivo.",
-          );
+
+        // 1. Intento primario: ruta publica /storage/emulated/0/Download
+        // Valido para Android 9 o inferior, o Android 10 con legacy storage.
+        if (hasPermission) {
+          try {
+            final publicDownloadDir = Directory('/storage/emulated/0/Download');
+            if (await publicDownloadDir.exists()) {
+              final publicFilePath = '${publicDownloadDir.path}/$fileName';
+              final publicFile = File(publicFilePath);
+              await publicFile.writeAsBytes(fileBytes);
+              return publicFilePath;
+            }
+          } on FileSystemException {
+            // Scoped Storage en Android 10+ bloquea la escritura directa POSIX
+            // en /storage/emulated/0/Download. Se captura la excepcion y se continua
+            // de inmediato al almacenamiento seguro de la aplicacion.
+          } catch (_) {
+            // Continuar al almacenamiento seguro ante cualquier otro error de acceso
+          }
         }
 
-        targetDir = Directory('/storage/emulated/0/Download');
-        if (!await targetDir.exists()) {
-          targetDir = await getExternalStorageDirectory();
-        }
+        // 2. Fallback compatible con Scoped Storage (Android 10, 11, 12, 13, 14, 15):
+        // Se utiliza el directorio externo de Descargas propio de la aplicacion
+        // (context.getExternalFilesDirs(Environment.DIRECTORY_DOWNLOADS)).
+        // No requiere permisos de almacenamiento y garantiza escritura en cualquier version de Android.
+        try {
+          final extDirs =
+              await getExternalStorageDirectories(type: StorageDirectory.downloads);
+          if (extDirs != null && extDirs.isNotEmpty) {
+            targetDir = extDirs.first;
+          }
+        } catch (_) {}
+
+        targetDir ??= await getExternalStorageDirectory();
+        targetDir ??= await getApplicationDocumentsDirectory();
       } else {
         targetDir = await getApplicationDocumentsDirectory();
       }
 
-      final filePath = '${targetDir!.path}/$fileName';
+      if (!await targetDir.exists()) {
+        await targetDir.create(recursive: true);
+      }
+
+      final filePath = '${targetDir.path}/$fileName';
       final file = File(filePath);
 
       await file.writeAsBytes(fileBytes);

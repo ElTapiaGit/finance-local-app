@@ -63,6 +63,18 @@ class AppColors {
   static const Color backgroundDark = Color(0xFF102216); 
   static const Color cardDark = Color(0xFF1C2C20); 
   static const Color textGrayLight = Color(0xFF9DB9A6); 
+
+  // Paleta extendida Material 3
+  static const Color surfaceLight = Color(0xFFF6F8F6); // Fondo principal claro
+  static const Color surfaceDark = Color(0xFF121212); // Fondo principal oscuro
+  static const Color surfaceContainerLight = Colors.white; // Fondo de tarjetas claro
+  static const Color surfaceContainerDark = Color(0xFF1E1E1E); // Fondo de tarjetas oscuro
+  static const Color onSurfaceLight = Colors.black87; // Texto principal claro
+  static const Color onSurfaceDark = Colors.white; // Texto principal oscuro
+  static const Color onSurfaceVariantLight = Color(0xFF757575); // Texto secundario claro (Colors.grey[600])
+  static const Color onSurfaceVariantDark = Color(0xFFBDBDBD); // Texto secundario oscuro (Colors.grey[400])
+  static const Color outlineLight = Color(0xFFE0E0E0); // Divisores/Bordes claros (Colors.grey[200])
+  static const Color outlineDark = Color(0xFF424242); // Divisores/Bordes oscuros (Colors.grey[800])
 }
 
 class ExpenseTrackerApp extends StatelessWidget {
@@ -93,10 +105,29 @@ class ExpenseTrackerApp extends StatelessWidget {
       // temas light y dark 
       theme: ThemeData(
         brightness: Brightness.light,
-        primaryColor: AppColors.primary,
-        scaffoldBackgroundColor: const Color(0xFFF6F8F6),
-        //color base
-        colorScheme: const ColorScheme.light(primary: AppColors.primary, secondary: AppColors.primary),
+        primaryColor: AppColors.primaryLight,
+        scaffoldBackgroundColor: AppColors.surfaceLight,
+        colorScheme: const ColorScheme.light(
+          primary: AppColors.primaryLight,
+          secondary: AppColors.primaryLight,
+          surface: AppColors.surfaceLight,
+          surfaceContainer: AppColors.surfaceContainerLight,
+          surfaceContainerHighest: Color(0xFFF5F5F5),
+          onSurface: AppColors.onSurfaceLight,
+          onSurfaceVariant: AppColors.onSurfaceVariantLight,
+          outline: AppColors.outlineLight,
+          outlineVariant: AppColors.outlineLight,
+        ),
+        cardTheme: CardThemeData(
+          color: AppColors.surfaceContainerLight,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        dividerTheme: const DividerThemeData(
+          color: AppColors.outlineLight,
+          space: 1,
+          thickness: 1,
+        ),
         // appBar transparente
         appBarTheme: const AppBarTheme(
           systemOverlayStyle: SystemUiOverlayStyle.dark,
@@ -114,9 +145,29 @@ class ExpenseTrackerApp extends StatelessWidget {
       darkTheme: ThemeData(
         brightness: Brightness.dark,
         primaryColor: AppColors.primary,
-        scaffoldBackgroundColor: AppColors.backgroundDark,
-        cardColor: AppColors.cardDark,
-        colorScheme: const ColorScheme.dark(primary: AppColors.primary, secondary: AppColors.primary, surface: AppColors.cardDark),
+        scaffoldBackgroundColor: AppColors.surfaceDark,
+        cardColor: AppColors.surfaceContainerDark,
+        colorScheme: const ColorScheme.dark(
+          primary: AppColors.primary,
+          secondary: AppColors.primary,
+          surface: AppColors.surfaceDark,
+          surfaceContainer: AppColors.surfaceContainerDark,
+          surfaceContainerHighest: Color(0xFF2C2C2C),
+          onSurface: AppColors.onSurfaceDark,
+          onSurfaceVariant: AppColors.onSurfaceVariantDark,
+          outline: AppColors.outlineDark,
+          outlineVariant: AppColors.outlineDark,
+        ),
+        cardTheme: CardThemeData(
+          color: AppColors.surfaceContainerDark,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        dividerTheme: const DividerThemeData(
+          color: AppColors.outlineDark,
+          space: 1,
+          thickness: 1,
+        ),
         appBarTheme: const AppBarTheme(
           systemOverlayStyle: SystemUiOverlayStyle.light,
           backgroundColor: Colors.transparent,
