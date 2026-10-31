@@ -80,5 +80,17 @@ class CategoryPreferencesService {
       return !hiddenCategories.contains(cat.name);
     }).toList();
   }
+
+  static final Map<String, int> _usageCounts = {};
+
+  /// Obtiene la frecuencia de uso de una categoria.
+  int getUsageCount(String categoryName) {
+    return _usageCounts[categoryName] ?? 0;
+  }
+
+  /// Incrementa la frecuencia de uso de una categoria.
+  void incrementUsage(String categoryName) {
+    _usageCounts[categoryName] = (_usageCounts[categoryName] ?? 0) + 1;
+  }
 }
 

@@ -28,7 +28,7 @@ class NotificationService {
 
     // configuracion android
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@android:drawable/ic_dialog_info');
+        AndroidInitializationSettings('@drawable/ic_notification');
 
     // configuracion ios
     const DarwinInitializationSettings initializationSettingsDarwin =
@@ -75,6 +75,25 @@ class NotificationService {
     return true; // En iOS se maneja automático con initializationSettingsDarwin
   }
 
+  // VERIFICAR Y SOLICITAR PERMISO DE ALARMAS EXACTAS (ANDROID 12+)
+  Future<bool> requestExactAlarmsPermission() async {
+    if (Platform.isAndroid) {
+      final androidImplementation = flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      if (androidImplementation != null) {
+        final bool canScheduleExact =
+            await androidImplementation.canScheduleExactNotifications() ?? false;
+        if (!canScheduleExact) {
+          final bool? granted =
+              await androidImplementation.requestExactAlarmsPermission();
+          return granted ?? false;
+        }
+        return true;
+      }
+    }
+    return true;
+  }
+
   //FUNCIONES DE LECTURA
   // Verificar si la app se abrio desde una notificacion cerrada
   Future<String?> getPendingNotificationPayload() async {
@@ -113,7 +132,7 @@ class NotificationService {
       priority: Priority.high,
       playSound: true,
       enableVibration: true,
-      icon: '@android:drawable/ic_dialog_info',
+      icon: '@drawable/ic_notification',
       // ongoing: false, //falso para borrar notificacion 
     );
 
@@ -131,22 +150,29 @@ class NotificationService {
 
     final tz.TZDateTime nextDate = _nextInstanceOfDay(dayOfMonth, hour, minute);
 
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-      id, 
-      title,
-      body,
-      nextDate,
-      notificationDetails,
-      //Hace que se repita cada mes en ese dia y hora
-      //androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // es puntual despierta a la hora que programa
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      // Obligatorio en v17+
-      //uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      // Repeticion mensual
-      matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
-      // AGREGAMOS EL PAYLOAD (LA ETIQUETA)
-      payload: 'calendar_reminder', 
-    );
+    try {
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        id, 
+        title,
+        body,
+        nextDate,
+        notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+        payload: 'calendar_reminder', 
+      );
+    } catch (e) {
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        id, 
+        title,
+        body,
+        nextDate,
+        notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+        payload: 'calendar_reminder', 
+      );
+    }
   }
 
   // CANCELAR NOTIFICACION
