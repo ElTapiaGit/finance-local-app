@@ -38,8 +38,8 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24
         targetSdk = 36
-        versionCode = 9
-        versionName = "1.2.6" //parche
+        versionCode = 11
+        versionName = "1.2.7"
     }
 
     signingConfigs {
@@ -53,11 +53,15 @@ android {
 
     buildTypes {
         release {
-            //signingConfig = signingConfigs.getByName("debug")
+
             signingConfig = signingConfigs.getByName("release")
-            // Opcional: Para reducir tamaño (minify), dejar en false pa evitar problemas
-            isMinifyEnabled = false 
-            isShrinkResources = false
+
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
