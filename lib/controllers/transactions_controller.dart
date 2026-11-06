@@ -133,7 +133,7 @@ class TransactionsController extends ChangeNotifier {
   void setSearchText(String value) {
     if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-      _searchText = value.toLowerCase();
+      _searchText = value.trim().toLowerCase();
       resetAndReload();
     });
   }

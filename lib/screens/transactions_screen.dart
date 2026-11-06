@@ -108,14 +108,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       return false;
     }
 
-    final isOld = tx.date.isBefore(DateTime.now().subtract(const Duration(days: 30)));
     final bool? confirm = await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(isOld ? "¿Eliminar registro antiguo?" : "¿Eliminar transacción?"),
-        content: Text(isOld
-            ? "Esto modificará tu historial y saldos pasados.\n\n¿Continuar?"
-            : "Esta acción no se puede deshacer."),
+        title: const Text("¿Eliminar transacción?"),
+        content: const Text("Esta acción no se puede deshacer."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),

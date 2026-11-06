@@ -112,18 +112,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   // ACCIONES SOBRE TRANSACCIONES
   Future<void> _handleEdit(TransactionModel tx) async {
-    if (PeriodLockHelper.isPeriodLocked(tx.date)) {
-      CustomSnackBar.show(
-        context: context,
-        message: "Periodo cerrado. No puedes editar transacciones antiguas.",
-        icon: Icons.lock_rounded,
-        backgroundColor: Colors.orange.shade700,
-        iconColor: Colors.white,
-        durationSeconds: 4,
-      );
-      return;
-    }
-
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -149,16 +137,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
       return false;
     }
 
-    final isOld = tx.date.isBefore(DateTime.now().subtract(const Duration(days: 30)));
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(isOld ? "¿Eliminar registro antiguo?" : "¿Eliminar transacción?"),
-        content: Text(
-          isOld
-              ? "Esto modificará tu historial y saldos pasados.\n\n¿Continuar?"
-              : "Esta acción no se puede deshacer.",
-        ),
+        title: const Text("¿Eliminar transacción?"),
+        content: const Text("Esta acción no se puede deshacer."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -375,13 +358,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ],
       ),
 
-      floatingActionButton: SizedBox(
-        width: 56, height: 56,
-        child: FloatingActionButton(
-          onPressed: () => _showAddOptions(context),
-          backgroundColor: isDarkMode ? AppColors.primary : AppColors.primaryLight,
-          child: Icon(Icons.add_rounded, color: isDarkMode ? Colors.black : Colors.white, size: 36),
-        ),
+      floatingActionButton: FloatingActionButton(
+        heroTag: null,
+        onPressed: () => _showAddOptions(context),
+        backgroundColor: isDarkMode ? AppColors.primary : AppColors.primaryLight,
+        child: Icon(Icons.add_rounded, color: isDarkMode ? Colors.black : Colors.white, size: 36),
       ),
     );
   }
@@ -815,7 +796,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       showModalBottomSheet(
                         context: context,
                         isScrollControlled: true,
-                        builder: (_) => const AddTransactionModal(),
+                        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                        ),
+                        builder: (_) => AddTransactionModal(initialDate: _selectedDay),
                       );
                     },
                     child: Padding(
@@ -829,7 +814,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
-                              Icons.receipt_long_rounded,
+                              Icons.add_circle_outline_rounded,
                               color: Colors.green,
                               size: 24,
                             ),
@@ -884,6 +869,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       showModalBottomSheet(
                         context: context,
                         isScrollControlled: true,
+                        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                        ),
                         builder: (_) => AddReminderModal(initialDay: _selectedDay.day),
                       );
                     },
