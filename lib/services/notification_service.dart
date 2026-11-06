@@ -1,8 +1,8 @@
+import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
 import '../main.dart'; 
 
@@ -16,50 +16,42 @@ class NotificationService {
 
   // INICIALIZACION
   Future<void> init() async {
-    // configurar zona horaria real
-    tz.initializeTimeZones();
+    // La bd de timezones ya se inicializó en main.dart
     try {
-      // zona internacional automatizado por zona del dispositivo
       final tzInfo = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(tzInfo.identifier));
     } catch (e) {
+      // Fallback seguro a UTC si falla el dispositivo
       tz.setLocalLocation(tz.UTC); 
     }
 
-    // configuracion android
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@drawable/ic_notification');
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
 
-    // configuracion ios
-    const DarwinInitializationSettings initializationSettingsDarwin =
-        DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-
-    const InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsDarwin,
-    );
-
-    // CLAVE PARA EL DEEP LINKING 
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
-      // ejecuta cuando el usuario TOCA la notificación
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
+      onDidReceiveNotificationResponse: (response) {
         if (response.payload == 'calendar_reminder') {
           navigatorKey.currentState?.pushNamed('/calendar');
         }
       },
     );
-    
-    /*/ PEDIR PERMISO EN ANDROID 13+,
-    if (Platform.isAndroid) {
-      await flutterLocalNotificationsPlugin
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.requestNotificationsPermission();
-    }*/
+
+    // CREACIÓN DEL CANAL (Obligatorio en Android 8.0+)
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'monthly_reminders_v19', // ID debe coincidir con el usado en zonedSchedule
+      'Recordatorios Mensuales',
+      description: 'Avisos de pagos recurrentes',
+      importance: Importance.max,
+      playSound: true,
+    );
+
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
   }
 
   // ADUANA DE PERMISOS
@@ -181,23 +173,22 @@ class NotificationService {
   }
 
   // LOGICA DE CALENDARIO
-  tz.TZDateTime _nextInstanceOfDay(int day, int hour, int minute) {
+  tz.TZDateTime _nextInstanceOfDay(int originalDay, int hour, int minute) {
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
-    // Nota: Si el usuario pone día 31 y el mes solo tiene 30, la librería suele ajustar o lanzar error.
-    // Creamos la fecha objetivo intentando respetar el mes actual
+    // Limpiamos los segundos y milisegundos de 'now' para comparación justa
+    final tz.TZDateTime nowClean = tz.TZDateTime(tz.local, now.year, now.month, now.day, now.hour, now.minute);
     
-    //para meses cortos
-    int safeDay = day;
     int daysInCurrentMonth = DateTime(now.year, now.month + 1, 0).day;
-    if (safeDay > daysInCurrentMonth) {
-      safeDay = daysInCurrentMonth;
-    }
-    // Generamos una fecha base segura
-    tz.TZDateTime scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, safeDay, hour, minute);
+    int safeCurrentDay = math.min(originalDay, daysInCurrentMonth);
+    
+    tz.TZDateTime scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, safeCurrentDay, hour, minute);
 
-    if (scheduledDate.isBefore(now)) {
-      // Si la fecha ya pasó este mes, pasamos al siguiente
-      scheduledDate = tz.TZDateTime(tz.local, now.year, now.month + 1, day, hour, minute);
+    if (scheduledDate.isBefore(nowClean)) {
+      int daysInNextMonth = DateTime(now.year, now.month + 2, 0).day;
+      int safeNextDay = math.min(originalDay, daysInNextMonth);
+      
+      // Creamos la fecha siguiente respetando tz.local, SIN USAR DateTime nativo para evitar desfases UTC
+      scheduledDate = tz.TZDateTime(tz.local, now.year, now.month + 1, safeNextDay, hour, minute);
     }
     return scheduledDate;
   }

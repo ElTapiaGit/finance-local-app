@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import '../main.dart'; // Para AppColors, navigatorKey
 import '../models/category_model.dart';
 import '../services/category_preferences_service.dart';
@@ -29,13 +28,39 @@ class _AddReminderModalState extends State<AddReminderModal> {
   TimeOfDay _selectedTime = const TimeOfDay(hour: 9, minute: 0);
   bool _showError = false;
 
+  List<CategoryModel> _orderedCategories = [];
   CategoryModel? _selectedCategory;
 
   @override
   void initState() {
     super.initState();
-    // Si recibe un dia del calendario, usalo. Si no, usa el dia de hoy.
     _selectedDay = widget.initialDay ?? DateTime.now().day;
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    final order = await _categoryPrefsService.getCategoryOrder();
+    final allCats = DatabaseService().categoryBox.values.toList();
+
+    // Filtra 'Ingreso' y aplica el orden del usuario
+    var sorted = _categoryPrefsService.applyOrder(allCats, order)
+        .where((c) => c.name != 'Ingreso').toList();
+
+    // Extrae 'Servicios' y clávala en la posicion 0
+    final serviciosIndex = sorted.indexWhere((c) => c.name == 'Servicios');
+    if (serviciosIndex != -1) {
+      final serviciosCat = sorted.removeAt(serviciosIndex);
+      sorted.insert(0, serviciosCat);
+    }
+
+    if (mounted) {
+      setState(() {
+        _orderedCategories = sorted;
+        if (_selectedCategory == null && sorted.isNotEmpty) {
+          _selectedCategory = sorted.first; // Selecciona 'Servicios' por defecto
+        }
+      });
+    }
   }
 
   @override
@@ -43,6 +68,78 @@ class _AddReminderModalState extends State<AddReminderModal> {
     _titleController.dispose();
     _amountController.dispose();
     super.dispose();
+  }
+
+  // SELECCIONAR DIA DEL MES
+  Future<void> _pickDay() async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final activeColor = isDarkMode ? AppColors.primary : AppColors.primaryLight;
+    final activeTextColor = isDarkMode ? Colors.black : Colors.white;
+
+    final int? picked = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDarkMode ? AppColors.cardDark : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          "Selecciona el día del mes",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: GridView.builder(
+            shrinkWrap: true,
+            itemCount: 28,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+            ),
+            itemBuilder: (context, index) {
+              final day = index + 1;
+              final isSelected = day == _selectedDay;
+              return InkWell(
+                onTap: () => Navigator.pop(ctx, day),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? activeColor
+                        : (isDarkMode ? Colors.white10 : Colors.grey.shade200),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    "$day",
+                    style: TextStyle(
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected
+                          ? activeTextColor
+                          : (isDarkMode ? Colors.white : Colors.black87),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              "Cancelar",
+              style: TextStyle(color: activeColor, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDay = picked;
+      });
+    }
   }
 
   // SELECCIONAR HORA
@@ -114,8 +211,8 @@ class _AddReminderModalState extends State<AddReminderModal> {
     final int colorValue = selectedCat?.colorValue ?? Colors.blue.toARGB32();
     final int iconCode = selectedCat?.iconCode ?? Icons.notifications_rounded.codePoint;
 
-    // GUARDAR EN BD
     final db = DatabaseService();
+    // 1. Guardamos SIEMPRE en BD primero.
     final newId = await db.saveReminderAndReturnId(
       title: title,
       amount: amount,
@@ -126,23 +223,48 @@ class _AddReminderModalState extends State<AddReminderModal> {
       minute: _selectedTime.minute,
     );
 
-    // PROGRAMAR NOTIFICACION CON PROTECCION DE PERMISOS
+    // 2. Intentamos programar la alarma.
     final notifService = NotificationService();
-    await notifService.requestExactAlarmsPermission();
-    await notifService.scheduleMonthlyNotification(
-      id: newId,
-      title: "¡Momento de pagar!",
-      body: "Pagar $title (${CurrencyFormat.currencySymbol}  ${amount.toStringAsFixed(2)})",
-      dayOfMonth: _selectedDay,
-      hour: _selectedTime.hour,
-      minute: _selectedTime.minute,
-    );
+    try {
+      await notifService.requestExactAlarmsPermission();
+      await notifService.scheduleMonthlyNotification(
+        id: newId,
+        title: "¡Momento de pagar!",
+        body: "Pagar $title (${CurrencyFormat.currencySymbol}  ${amount.toStringAsFixed(2)})",
+        dayOfMonth: _selectedDay,
+        hour: _selectedTime.hour,
+        minute: _selectedTime.minute,
+      );
+    } catch (e) {
+      debugPrint("Error programando alarma: $e");
+      if (!mounted) return;
+      FocusScope.of(context).unfocus();
+      // Mostramos diálogo de error CRÍTICO en lugar del de éxito
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text("Error de Sistema"),
+          content: Text("El recordatorio se guardó en tu calendario, pero tu teléfono bloqueó la alarma. Error: $e"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pop(context); // Cierra el modal principal
+              },
+              child: const Text("Entendido"),
+            ),
+          ],
+        ),
+      );
+      return; // Detenemos aquí, ya no muestra el mensaje de Xiaomi/Samsung.
+    }
 
-    // CERRAR MODAL Y MOSTRAR DIALOGO EDUCATIVO
     if (!mounted) return;
+    FocusScope.of(context).unfocus();
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    Navigator.pop(context);
+    Navigator.pop(context); 
 
+    // 3. Muestra el diálogo educativo post-guardado
     final navContext = navigatorKey.currentContext;
     if (navContext != null && navContext.mounted) {
       showDialog(
@@ -249,7 +371,7 @@ class _AddReminderModalState extends State<AddReminderModal> {
                     ),
                     const SizedBox(height: 20),
 
-                    // SELECCION DE CATEGORIA DINAMICA CON HIVE
+                    // SELECCION DE CATEGORIA DINAMICA
                     Container(
                       alignment: Alignment.centerLeft,
                       child: Text(
@@ -265,81 +387,61 @@ class _AddReminderModalState extends State<AddReminderModal> {
 
                     SizedBox(
                       height: 70,
-                      child: ValueListenableBuilder<Box<CategoryModel>>(
-                        valueListenable: DatabaseService().categoryBox.listenable(),
-                        builder: (context, box, _) {
-                          final categories = box.values.where((c) => c.name != 'Ingreso').toList();
-                          categories.sort(
-                            (a, b) => _categoryPrefsService
-                                .getUsageCount(b.name)
-                                .compareTo(_categoryPrefsService.getUsageCount(a.name)),
-                          );
+                      child: _orderedCategories.isEmpty
+                          ? const Center(child: Text("No hay categorías"))
+                          : ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _orderedCategories.length,
+                              itemBuilder: (context, index) {
+                                final cat = _orderedCategories[index];
+                                final isSelected = _selectedCategory?.name == cat.name;
+                                final catColor = Color(cat.colorValue);
+                                final catIcon = IconData(cat.iconCode, fontFamily: 'MaterialIcons');
 
-                          if (categories.isEmpty) {
-                            return const Center(child: Text("No hay categorías"));
-                          }
-
-                          if (_selectedCategory == null ||
-                              !categories.any((c) => c.name == _selectedCategory!.name)) {
-                            _selectedCategory = categories.first;
-                          }
-
-                          return ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: categories.length,
-                            itemBuilder: (context, index) {
-                              final cat = categories[index];
-                              final isSelected = _selectedCategory?.name == cat.name;
-                              final catColor = Color(cat.colorValue);
-                              final catIcon = IconData(cat.iconCode, fontFamily: 'MaterialIcons');
-
-                              return GestureDetector(
-                                onTap: () {
-                                  setState(() => _selectedCategory = cat);
-                                  _categoryPrefsService.incrementUsage(cat.name);
-                                },
-                                child: Container(
-                                  margin: const EdgeInsets.only(right: 16),
-                                  child: Column(
-                                    children: [
-                                      Container(
-                                        width: 45,
-                                        height: 45,
-                                        decoration: BoxDecoration(
-                                          color: isSelected
-                                              ? catColor
-                                              : (isDarkMode ? Colors.white10 : Colors.grey.shade100),
-                                          shape: BoxShape.circle,
-                                          border: isSelected
-                                              ? Border.all(color: Colors.white, width: 2)
-                                              : null,
+                                return GestureDetector(
+                                  onTap: () {
+                                    setState(() => _selectedCategory = cat);
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.only(right: 16),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          width: 45,
+                                          height: 45,
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? catColor
+                                                : (isDarkMode ? Colors.white10 : Colors.grey.shade100),
+                                            shape: BoxShape.circle,
+                                            border: isSelected
+                                                ? Border.all(color: Colors.white, width: 2)
+                                                : null,
+                                          ),
+                                          child: Icon(
+                                            catIcon,
+                                            color: isSelected ? Colors.white : Colors.grey,
+                                            size: 20,
+                                          ),
                                         ),
-                                        child: Icon(
-                                          catIcon,
-                                          color: isSelected ? Colors.white : Colors.grey,
-                                          size: 20,
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          cat.name,
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight:
+                                                isSelected ? FontWeight.bold : FontWeight.normal,
+                                            color: isSelected
+                                                ? (isDarkMode ? Colors.white : Colors.black)
+                                                : Colors.grey,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        cat.name,
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight:
-                                              isSelected ? FontWeight.bold : FontWeight.normal,
-                                          color: isSelected
-                                              ? (isDarkMode ? Colors.white : Colors.black)
-                                              : Colors.grey,
-                                        ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
+                                );
+                              },
+                            ),
                     ),
                     const Divider(),
                     const SizedBox(height: 10),
@@ -358,33 +460,37 @@ class _AddReminderModalState extends State<AddReminderModal> {
                               ),
                               const SizedBox(height: 8),
 
-                              Container(
-                                height: 50,
-                                alignment: Alignment.center,
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                decoration: BoxDecoration(
-                                  color: isDarkMode ? Colors.white10 : Colors.grey.shade200,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.grey.shade400),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.calendar_today_rounded,
-                                      size: 16,
-                                      color: isDarkMode ? Colors.white54 : Colors.grey.shade600,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      "Día $_selectedDay",
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: isDarkMode ? Colors.white70 : Colors.black87,
+                              InkWell(
+                                onTap: _pickDay,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  height: 50,
+                                  alignment: Alignment.center,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: isDarkMode ? Colors.white10 : Colors.grey.shade200,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.grey.shade400),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.calendar_today_rounded,
+                                        size: 16,
+                                        color: isDarkMode ? Colors.white54 : Colors.grey.shade600,
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        "Día $_selectedDay",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: isDarkMode ? Colors.white70 : Colors.black87,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],

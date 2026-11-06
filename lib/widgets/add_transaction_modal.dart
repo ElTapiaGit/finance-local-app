@@ -47,8 +47,9 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
   bool _isExpense = true; 
   DateTime _selectedDate = DateTime.now();
   String _selectedPaymentMethod = 'Efectivo';
-  String _selectedCategoryName = 'Comida'; 
+  String _selectedCategoryName = ''; 
   bool _showError = false; 
+  bool _isReadOnly = false;
 
   final List<String> _paymentMethods = [
     'Efectivo',
@@ -67,6 +68,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
 
     if (widget.transactionToEdit != null) {
       final tx = widget.transactionToEdit!;
+      _isReadOnly = PeriodLockHelper.isPeriodLocked(tx.date);
       _amountController.text = numberFormat.format(tx.amount);
       _titleController.text = tx.title;
       _isExpense = tx.type == TransactionType.expense;
@@ -110,6 +112,19 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
       setState(() {
         _hiddenCategoryNames = hidden;
         _categoryOrder = order;
+
+        // Configurar la seleccion por defecto (índice 0) si es nueva transaccion
+        if (widget.transactionToEdit == null && widget.initialCategoryIcon == null) {
+          final allCats = DatabaseService().categoryBox.values.toList();
+          final visible = _categoryPrefsService.filterVisible(
+            _categoryPrefsService.applyOrder(allCats, order),
+            isExpense: _isExpense,
+            hiddenCategories: widget.initialCategoryIcon != null ? [] : hidden,
+          );
+          if (visible.isNotEmpty) {
+            _selectedCategoryName = visible.first.name;
+          }
+        }
       });
     }
   }
@@ -133,7 +148,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
         onCategoryDeleted: (deletedName) {
           if (_selectedCategoryName == deletedName) {
             setState(() {
-              _selectedCategoryName = 'Comida';
+              _selectedCategoryName = '';
             });
           }
         },
@@ -266,7 +281,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
         final visibleCats = _categoryPrefsService.filterVisible(
           orderedCategories,
           isExpense: _isExpense,
-          hiddenCategories: _hiddenCategoryNames,
+          hiddenCategories: widget.initialCategoryIcon != null ? [] : _hiddenCategoryNames,
         );
 
         if (!visibleCats.any((c) => c.name == _selectedCategoryName)) {
@@ -308,27 +323,23 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        TransactionTypeSelector(
-                          isExpense: _isExpense,
-                          onTypeChanged: (newIsExpense) {
-                            setState(() {
-                              _isExpense = newIsExpense;
-                              if (_isExpense) {
-                                if (visibleCats.isNotEmpty) {
-                                  _selectedCategoryName = visibleCats.first.name;
-                                } else {
-                                  _selectedCategoryName = 'Comida';
-                                }
-                              } else {
-                                _selectedCategoryName = 'Ingreso';
-                              }
-                            });
-                          },
+                        IgnorePointer(
+                          ignoring: _isReadOnly,
+                          child: TransactionTypeSelector(
+                            isExpense: _isExpense,
+                            onTypeChanged: (newIsExpense) {
+                              setState(() {
+                                _isExpense = newIsExpense;
+                                _selectedCategoryName = ''; // Forzará a la guarda del build() a elegir la correcta (índice 0 o 'Ingreso')
+                              });
+                            },
+                          ),
                         ),
                         const SizedBox(height: 24),
 
                         TextField(
                           controller: _amountController,
+                          readOnly: _isReadOnly,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           inputFormatters: [
                             LengthLimitingTextInputFormatter(14),
@@ -352,6 +363,8 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
 
                         TextField(
                           controller: _titleController,
+                          readOnly: _isReadOnly,
+                          maxLines: null,
                           textCapitalization: TextCapitalization.sentences,
                           onChanged: (value) {
                             if (_showError) {
@@ -382,41 +395,47 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                         ),
                         const SizedBox(height: 16),
 
-                        DatePaymentSelectorRow(
-                          selectedDate: _selectedDate,
-                          selectedPaymentMethod: _selectedPaymentMethod,
-                          paymentMethods: _paymentMethods,
-                          onDateChanged: (newDate) {
-                            setState(() {
-                              _selectedDate = newDate;
-                            });
-                          },
-                          onPaymentMethodChanged: (newMethod) {
-                            setState(() {
-                              _selectedPaymentMethod = newMethod;
-                            });
-                          },
+                        IgnorePointer(
+                          ignoring: _isReadOnly,
+                          child: DatePaymentSelectorRow(
+                            selectedDate: _selectedDate,
+                            selectedPaymentMethod: _selectedPaymentMethod,
+                            paymentMethods: _paymentMethods,
+                            onDateChanged: (newDate) {
+                              setState(() {
+                                _selectedDate = newDate;
+                              });
+                            },
+                            onPaymentMethodChanged: (newMethod) {
+                              setState(() {
+                                _selectedPaymentMethod = newMethod;
+                              });
+                            },
+                          ),
                         ),
                         const SizedBox(height: 20),
 
-                        CategoryHorizontalSelector(
-                          categories: visibleCats,
-                          selectedCategoryName: _selectedCategoryName,
-                          onCategorySelected: (categoryName) {
-                            setState(() {
-                              _selectedCategoryName = categoryName;
-                            });
-                          },
-                          onOpenConfigDialog: _openCategoryConfigDialog,
-                          onCategoryCreated: (newCategory) async {
-                            setState(() {
-                              if (!_categoryOrder.contains(newCategory.name)) {
-                                _categoryOrder.insert(0, newCategory.name);
-                              }
-                              _selectedCategoryName = newCategory.name;
-                            });
-                            await _categoryPrefsService.saveCategoryOrder(_categoryOrder);
-                          },
+                        IgnorePointer(
+                          ignoring: _isReadOnly,
+                          child: CategoryHorizontalSelector(
+                            categories: visibleCats,
+                            selectedCategoryName: _selectedCategoryName,
+                            onCategorySelected: (categoryName) {
+                              setState(() {
+                                _selectedCategoryName = categoryName;
+                              });
+                            },
+                            onOpenConfigDialog: _openCategoryConfigDialog,
+                            onCategoryCreated: (newCategory) async {
+                              setState(() {
+                                if (!_categoryOrder.contains(newCategory.name)) {
+                                  _categoryOrder.add(newCategory.name);
+                                }
+                                _selectedCategoryName = newCategory.name;
+                              });
+                              await _categoryPrefsService.saveCategoryOrder(_categoryOrder);
+                            },
+                          ),
                         ),
                         const SizedBox(height: 12),
                       ],
@@ -429,9 +448,12 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                   width: double.infinity,
                   height: 85,
                   child: SaveButton(
-                    label: widget.transactionToEdit != null
-                        ? "Actualizar Transacción"
-                        : "Guardar Transacción",
+                    isEnabled: !_isReadOnly,
+                    label: _isReadOnly
+                        ? "Período Cerrado (Solo Lectura)"
+                        : (widget.transactionToEdit != null
+                            ? "Actualizar Transacción"
+                            : "Guardar Transacción"),
                     onPressed: _submitData,
                   ),
                 ),

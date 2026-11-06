@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart'; 
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:timezone/data/latest.dart' as tz;
 import 'screens/home_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/calendar_screen.dart';
@@ -22,6 +23,7 @@ void main() async {
   //aseguramos la vinculacion con el motor grafico
   WidgetsFlutterBinding.ensureInitialized(); 
   
+  tz.initializeTimeZones();
   await Hive.initFlutter();
   //debugPrint("Hive inicializado correctamente.");
   try {

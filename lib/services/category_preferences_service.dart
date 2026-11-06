@@ -31,24 +31,16 @@ class CategoryPreferencesService {
   }
 
   /// Aplica el orden guardado a la lista de categorias.
-  /// Cualquier categoria presente en Hive que no figure en currentOrder
-  /// se inserta en el indice 0 para garantizar visibilidad prioritaria.
   List<CategoryModel> applyOrder(
     List<CategoryModel> categories,
     List<String> currentOrder,
   ) {
     if (categories.isEmpty) return [];
 
-    bool needsSave = false;
     for (final cat in categories) {
       if (!currentOrder.contains(cat.name)) {
-        currentOrder.insert(0, cat.name);
-        needsSave = true;
+        currentOrder.add(cat.name);
       }
-    }
-
-    if (needsSave) {
-      saveCategoryOrder(currentOrder);
     }
 
     final sortedList = List<CategoryModel>.from(categories);
@@ -93,4 +85,3 @@ class CategoryPreferencesService {
     _usageCounts[categoryName] = (_usageCounts[categoryName] ?? 0) + 1;
   }
 }
-

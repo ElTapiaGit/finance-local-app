@@ -1,17 +1,19 @@
 /// Helper para la validacion de politicas de cierre de periodos financieros.
 class PeriodLockHelper {
-  /// Determina si un periodo contable se encuentra cerrado para edicion o eliminacion.
-  /// Si la fecha de la transaccion corresponde al mes y año actual, el periodo esta abierto.
-  /// Para transacciones de meses anteriores, el periodo se bloquea a partir del dia 4 del mes corriente.
   static bool isPeriodLocked(DateTime transactionDate) {
     final now = DateTime.now();
-    if (transactionDate.year == now.year && transactionDate.month == now.month) {
-      return false;
+    // 1. Bloqueo estricto por antigüedad > 31 días
+    if (now.difference(transactionDate).inDays > 31) return true;
+
+    // 2. Mes actual siempre abierto
+    if (transactionDate.year == now.year && transactionDate.month == now.month) return false;
+
+    // 3. Mes anterior abierto SOLO si estamos en los días 1, 2 o 3, pero SIEMPRE que la transacción NO supere los 31 días de antigüedad.
+    final previousMonth = DateTime(now.year, now.month - 1, 1);
+    if (transactionDate.year == previousMonth.year && transactionDate.month == previousMonth.month) {
+      if (now.day < 4 && now.difference(transactionDate).inDays <= 31) return false;
     }
-    if (now.day >= 4) {
-      return true;
-    }
-    return false;
+
+    return true; // Todo lo demás queda bloqueado
   }
 }
-

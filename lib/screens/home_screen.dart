@@ -75,25 +75,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // BOTON FLOTANTE 
       floatingActionButton: _selectedIndex == 0 
-        ? SizedBox(
-            width: 60, height: 60,
-            child: FloatingActionButton(
-              onPressed: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true, 
-                  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                  ),
-                  builder: (context) => const AddTransactionModal(),
-                );
-              },
-              backgroundColor: isDarkMode ? AppColors.primary : AppColors.primaryLight,
-              shape: const CircleBorder(),
-              elevation: 4,
-              child: Icon(Icons.add_rounded, color: isDarkMode ? Colors.black : Colors.white, size: 32),
-            ),
+        ? FloatingActionButton(
+            heroTag: null,
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true, 
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                builder: (context) => const AddTransactionModal(),
+              );
+            },
+            backgroundColor: isDarkMode ? AppColors.primary : AppColors.primaryLight,
+            shape: const CircleBorder(),
+            elevation: 4,
+            child: Icon(Icons.add_rounded, color: isDarkMode ? Colors.black : Colors.white, size: 32),
           )
         : null, // Ocultar el boton si no esta en home
       
